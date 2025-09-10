@@ -6,6 +6,10 @@ use App\Http\Controllers\ChapterController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\UserCourseController;
+use App\Http\Controllers\UserLessonController;
+use App\Http\Controllers\UserQuizController;
+use App\Http\Controllers\CertificateController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication routes (public)
@@ -53,9 +57,33 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/questions/{id}', [QuestionController::class, 'destroy']);
     });
 
-    // Student routes
-    Route::middleware('role:student')->prefix('student')->group(function () {
-        // Student-specific endpoints can be added here
-        // For example: course enrollment, quiz attempts, etc.
+    // User/Student routes (accessible to authenticated users)
+    // Courses - Public browsing and enrollment
+    Route::get('/courses', [UserCourseController::class, 'index']);
+    Route::get('/courses/{id}', [UserCourseController::class, 'show']);
+    Route::post('/courses/{id}/enroll', [UserCourseController::class, 'enroll']);
+    Route::get('/my-enrollments', [UserCourseController::class, 'myEnrollments']);
+    
+    // Lessons - View and track progress
+    Route::get('/lessons/{id}', [UserLessonController::class, 'show']);
+    Route::post('/lessons/{id}/complete', [UserLessonController::class, 'complete']);
+    Route::get('/courses/{courseId}/progress', [UserLessonController::class, 'getCourseProgress']);
+    
+    // Quizzes - Take quizzes and submit answers
+    Route::get('/chapters/{chapterId}/quiz', [UserQuizController::class, 'getQuiz']);
+    Route::post('/quiz/{quizId}/submit', [UserQuizController::class, 'submitQuiz']);
+    Route::get('/quiz/{quizId}/attempts', [UserQuizController::class, 'getAttempts']);
+    
+    // Certificates - Generate and verify
+    Route::get('/courses/{courseId}/certificate', [CertificateController::class, 'generateCertificate']);
+    Route::get('/my-certificates', [CertificateController::class, 'myCertificates']);
+    Route::post('/certificates/{certificateId}/regenerate', [CertificateController::class, 'regenerateCertificate']);
+    
+    // Admin-only certificate routes
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/admin/certificates/bulk-generate', [CertificateController::class, 'bulkGenerate']);
     });
 });
+
+// Public certificate verification (no authentication required)
+Route::get('/certificate/verify/{token}', [CertificateController::class, 'verifyCertificate']);

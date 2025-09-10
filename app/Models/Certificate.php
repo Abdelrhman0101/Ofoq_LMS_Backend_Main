@@ -9,6 +9,20 @@ class Certificate extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'user_id',
+        'course_id',
+        'verification_token',
+        'file_path',
+        'certificate_data',
+        'issued_at'
+    ];
+
+    protected $casts = [
+        'issued_at' => 'datetime',
+        'certificate_data' => 'array'
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -17,5 +31,29 @@ class Certificate extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    /**
+     * Get the verification URL for this certificate
+     */
+    public function getVerificationUrlAttribute(): string
+    {
+        return url("/api/certificate/verify/{$this->verification_token}");
+    }
+
+    /**
+     * Get the download URL for this certificate
+     */
+    public function getDownloadUrlAttribute(): string
+    {
+        return url("/api/courses/{$this->course_id}/certificate");
+    }
+
+    /**
+     * Check if certificate file exists
+     */
+    public function hasFile(): bool
+    {
+        return $this->file_path && \Storage::disk('public')->exists($this->file_path);
     }
 }
