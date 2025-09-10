@@ -277,3 +277,171 @@ These endpoints are for managing the application's content and are restricted to
 - **Description**: Delete a question.
 - **Authorization**: Admin only.
 - **Success Response**: `204 No Content`
+
+## Authentication Endpoints
+
+These endpoints handle user authentication and profile management.
+
+### Registration & Login
+
+#### `POST /api/auth/signup`
+- **Description**: Register a new student account.
+- **Authorization**: Public (no authentication required).
+- **Request Body**:
+  ```json
+  {
+    "name": "Ahmed Ali",
+    "email": "ahmed@example.com",
+    "password": "secret123",
+    "password_confirmation": "secret123"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "user": {
+      "id": 5,
+      "name": "Ahmed Ali",
+      "email": "ahmed@example.com",
+      "role": "student"
+    },
+    "token": "SANCTUM_TOKEN"
+  }
+  ```
+
+#### `POST /api/auth/login`
+- **Description**: Login for admin or student.
+- **Authorization**: Public (no authentication required).
+- **Request Body**:
+  ```json
+  {
+    "email": "ahmed@example.com",
+    "password": "secret123"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "user": {
+      "id": 5,
+      "name": "Ahmed Ali",
+      "email": "ahmed@example.com",
+      "role": "student"
+    },
+    "token": "SANCTUM_TOKEN"
+  }
+  ```
+
+#### `POST /api/auth/logout`
+- **Description**: Logout current user.
+- **Authorization**: Authenticated user (auth:sanctum).
+- **Success Response**:
+  ```json
+  {
+    "message": "Successfully logged out"
+  }
+  ```
+
+### Password Reset
+
+#### `POST /api/auth/forgot-password`
+- **Description**: Send password reset OTP to email.
+- **Authorization**: Public (no authentication required).
+- **Request Body**:
+  ```json
+  {
+    "email": "ahmed@example.com"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "message": "Password reset OTP sent to your email"
+  }
+  ```
+
+#### `POST /api/auth/reset-password`
+- **Description**: Reset password using OTP.
+- **Authorization**: Public (no authentication required).
+- **Request Body**:
+  ```json
+  {
+    "email": "ahmed@example.com",
+    "otp": "123456",
+    "password": "newpassword123",
+    "password_confirmation": "newpassword123"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "message": "Password reset successfully"
+  }
+  ```
+
+### Profile Management
+
+#### `GET /api/profile`
+- **Description**: Get current user profile.
+- **Authorization**: Authenticated user (auth:sanctum).
+- **Success Response**:
+  ```json
+  {
+    "user": {
+      "id": 5,
+      "name": "Ahmed Ali",
+      "email": "ahmed@example.com",
+      "role": "student",
+      "profile_picture": null,
+      "created_at": "2023-10-27T10:00:00.000000Z",
+      "updated_at": "2023-10-27T10:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `PUT /api/profile`
+- **Description**: Update current user profile.
+- **Authorization**: Authenticated user (auth:sanctum).
+- **Request Body**:
+  ```json
+  {
+    "name": "Ahmed Ali Updated",
+    "profile_picture": "https://example.com/profile.jpg"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "user": {
+      "id": 5,
+      "name": "Ahmed Ali Updated",
+      "email": "ahmed@example.com",
+      "role": "student",
+      "profile_picture": "https://example.com/profile.jpg",
+      "created_at": "2023-10-27T10:00:00.000000Z",
+      "updated_at": "2023-10-27T12:00:00.000000Z"
+    }
+  }
+  ```
+
+## Authorization & Middleware
+
+### Middleware Usage
+
+- **auth:sanctum**: Ensures the user is authenticated with a valid token.
+- **role:admin**: Restricts access to admin users only.
+- **role:student**: Restricts access to student users only.
+
+### Default Users
+
+The system comes with default users for testing:
+
+- **Admin User**:
+  - Email: `admin@ofoq.com`
+  - Password: `admin123`
+  - Role: `admin`
+
+- **Test Student**:
+  - Email: `student@ofoq.com`
+  - Password: `student123`
+  - Role: `student`
