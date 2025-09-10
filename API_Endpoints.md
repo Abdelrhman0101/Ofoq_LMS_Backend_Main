@@ -1,0 +1,279 @@
+# Project API Endpoints
+
+This document provides a comprehensive reference for all the API endpoints available in the project.
+
+## Admin Endpoints
+
+These endpoints are for managing the application's content and are restricted to users with the 'admin' role.
+
+### Courses
+
+#### `GET /api/admin/courses`
+- **Description**: Retrieve a list of all courses.
+- **Authorization**: Admin only.
+- **Success Response**:
+  ```json
+  {
+    "data": [
+      {
+        "id": 1,
+        "title": "Sample Course",
+        "description": "This is a sample course.",
+        "created_at": "2023-10-27T10:00:00.000000Z",
+        "updated_at": "2023-10-27T10:00:00.000000Z"
+      }
+    ]
+  }
+  ```
+
+#### `GET /api/admin/courses/{id}`
+- **Description**: Retrieve a single course by its ID.
+- **Authorization**: Admin only.
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "title": "Sample Course",
+      "description": "This is a sample course.",
+      "created_at": "2023-10-27T10:00:00.000000Z",
+      "updated_at": "2023-10-27T10:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `POST /api/admin/courses`
+- **Description**: Create a new course.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "New Course Title",
+    "description": "Description for the new course."
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 2,
+      "title": "New Course Title",
+      "description": "Description for the new course.",
+      "created_at": "2023-10-27T11:00:00.000000Z",
+      "updated_at": "2023-10-27T11:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `PUT /api/admin/courses/{id}`
+- **Description**: Update an existing course.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "Updated Course Title"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "title": "Updated Course Title",
+      "description": "This is a sample course.",
+      "created_at": "2023-10-27T10:00:00.000000Z",
+      "updated_at": "2023-10-27T12:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `DELETE /api/admin/courses/{id}`
+- **Description**: Delete a course.
+- **Authorization**: Admin only.
+- **Success Response**: `204 No Content`
+
+### Chapters
+
+#### `POST /api/admin/courses/{course_id}/chapters`
+- **Description**: Add a new chapter to a course.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "New Chapter Title"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "course_id": 1,
+      "title": "New Chapter Title",
+      "created_at": "2023-10-27T13:00:00.000000Z",
+      "updated_at": "2023-10-27T13:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `PUT /api/admin/chapters/{id}`
+- **Description**: Update an existing chapter.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "Updated Chapter Title"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "course_id": 1,
+      "title": "Updated Chapter Title",
+      "created_at": "2023-10-27T13:00:00.000000Z",
+      "updated_at": "2023-10-27T14:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `DELETE /api/admin/chapters/{id}`
+- **Description**: Delete a chapter.
+- **Authorization**: Admin only.
+- **Success Response**: `204 No Content`
+
+### Lessons
+
+#### `POST /api/admin/chapters/{chapter_id}/lessons`
+- **Description**: Add a new lesson to a chapter.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "New Lesson Title",
+    "content": "Lesson content goes here."
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "chapter_id": 1,
+      "title": "New Lesson Title",
+      "content": "Lesson content goes here.",
+      "created_at": "2023-10-27T15:00:00.000000Z",
+      "updated_at": "2023-10-27T15:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `PUT /api/admin/lessons/{id}`
+- **Description**: Update an existing lesson.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "Updated Lesson Title"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "chapter_id": 1,
+      "title": "Updated Lesson Title",
+      "content": "Lesson content goes here.",
+      "created_at": "2023-10-27T15:00:00.000000Z",
+      "updated_at": "2023-10-27T16:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `DELETE /api/admin/lessons/{id}`
+- **Description**: Delete a lesson.
+- **Authorization**: Admin only.
+- **Success Response**: `204 No Content`
+
+### Quizzes & Questions
+
+#### `POST /api/admin/chapters/{chapter_id}/quiz`
+- **Description**: Create a new quiz for a chapter.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "title": "New Quiz Title"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "chapter_id": 1,
+      "title": "New Quiz Title",
+      "created_at": "2023-10-27T17:00:00.000000Z",
+      "updated_at": "2023-10-27T17:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `POST /api/admin/quiz/{quiz_id}/questions`
+- **Description**: Add a new question to a quiz.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "question": "What is 2+2?",
+    "options": ["3", "4", "5"],
+    "correct_answer": "4"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "quiz_id": 1,
+      "question": "What is 2+2?",
+      "options": ["3", "4", "5"],
+      "correct_answer": "4",
+      "created_at": "2023-10-27T18:00:00.000000Z",
+      "updated_at": "2023-10-27T18:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `PUT /api/admin/questions/{id}`
+- **Description**: Update an existing question.
+- **Authorization**: Admin only.
+- **Request Body**:
+  ```json
+  {
+    "question": "What is the capital of France?",
+    "options": ["Berlin", "Madrid", "Paris"],
+    "correct_answer": "Paris"
+  }
+  ```
+- **Success Response**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "quiz_id": 1,
+      "question": "What is the capital of France?",
+      "options": ["Berlin", "Madrid", "Paris"],
+      "correct_answer": "Paris",
+      "created_at": "2023-10-27T18:00:00.000000Z",
+      "updated_at": "2023-10-27T19:00:00.000000Z"
+    }
+  }
+  ```
+
+#### `DELETE /api/admin/questions/{id}`
+- **Description**: Delete a question.
+- **Authorization**: Admin only.
+- **Success Response**: `204 No Content`
