@@ -229,7 +229,7 @@ These endpoints are for managing the application's content and are restricted to
   {
     "question": "What is 2+2?",
     "options": ["3", "4", "5"],
-    "correct_answer": "4"
+    <!-- "correct_answer": "4" -->
   }
   ```
 - **Success Response**:

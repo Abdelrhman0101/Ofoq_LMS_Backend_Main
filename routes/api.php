@@ -13,23 +13,23 @@ use App\Http\Controllers\CertificateController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication routes (public)
-Route::prefix('auth')->group(function () {
-    Route::post('/signup', [AuthController::class, 'signup']);
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-});
+Route::post('/signup', [AuthController::class, 'signup']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+// Route::prefix('auth')->group(function () {
+// });
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth routes
+    // Auth routes done
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
 
     // Admin routes
-    Route::middleware('role:admin')->prefix('admin')->group(function () {
-        // Courses
+    Route::middleware('role:admin')->group(function () {
+        // Courses done
         Route::get('/courses', [CourseController::class, 'index']);
         Route::get('/courses/{id}', [CourseController::class, 'show']);
         Route::post('/courses', [CourseController::class, 'store']);
@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/chapters/{chapter_id}/lessons', [LessonController::class, 'store']);
         Route::put('/lessons/{id}', [LessonController::class, 'update']);
         Route::delete('/lessons/{id}', [LessonController::class, 'destroy']);
+        Route::post('/lessons/{lesson_id}/quiz', [LessonController::class, 'addQuizToLesson']);
 
         // Quizzes
         Route::post('/chapters/{chapter_id}/quiz', [QuizController::class, 'store']);

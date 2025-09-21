@@ -12,4 +12,12 @@ class Course extends Model
     {
         return $this->hasMany(\App\Models\Chapter::class);
     }
+
+    protected $fillable = [
+        "title",
+        "description",
+        "image",
+        "duration",
+        "level"
+    ];
 }

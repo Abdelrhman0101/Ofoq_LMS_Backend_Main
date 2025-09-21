@@ -11,13 +11,22 @@ class Quiz extends Model
 {
     use HasFactory;
 
-    public function chapter(): BelongsTo
+    public function quizzable()
     {
-        return $this->belongsTo(Chapter::class);
+        return $this->morphTo();
     }
 
     public function questions(): HasMany
     {
         return $this->hasMany(Question::class);
     }
+    protected $fillable = [
+        'title',
+        'description',
+        'quizzable_type',
+        'quizzable_id',
+        // 'passing_score',
+        // 'time_limit',
+    ];
+
 }

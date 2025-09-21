@@ -30,6 +30,9 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
+            'image' => 'nullable|string|max:255',
+            'duration' => 'required|integer|min:1',
+            'level' => 'required|in:beginner,intermediate,advanced',
         ]);
 
         $course = Course::create($validated);

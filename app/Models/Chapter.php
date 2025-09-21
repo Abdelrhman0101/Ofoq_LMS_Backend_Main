@@ -23,8 +23,20 @@ class Chapter extends Model
         return $this->hasMany(Lesson::class);
     }
 
-    public function quiz(): HasOne
+    // public function quiz(): HasOne
+    // {
+    //     return $this->hasOne(Quiz::class);
+    // }
+     // Chapter has one quiz
+    public function quiz()
     {
-        return $this->hasOne(Quiz::class);
+        return $this->morphOne(Quiz::class, 'quizzable');
     }
+
+    protected $fillable = [
+        "title",
+        "description",
+        "course_id",
+        "order"
+    ];
 }

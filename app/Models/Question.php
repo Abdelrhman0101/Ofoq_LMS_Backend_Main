@@ -14,4 +14,14 @@ class Question extends Model
     {
         return $this->belongsTo(Quiz::class);
     }
+    protected $fillable = [
+        'quiz_id',
+        'question',
+        'options',
+        'correct_answer',
+    ];
+    protected $casts = [
+        'options' => 'array',
+        'correct_answer' => 'array',
+    ];
 }

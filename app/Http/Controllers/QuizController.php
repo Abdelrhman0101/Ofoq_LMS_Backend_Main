@@ -81,4 +81,34 @@ class QuizController extends Controller
             'message' => 'Quiz deleted successfully'
         ]);
     }
+
+////quiz for lessons
+
+    // public function storeForLesson(Request $request, $lesson_id)
+    // {
+    //     $lesson = Lesson::find($lesson_id);
+        
+    //     if (!$lesson) {
+    //         return response()->json([
+    //             'message' => 'Lesson not found'
+    //         ], 404);
+    //     }
+
+    //     // Check if lesson already has a quiz
+    //     if ($lesson->quiz) {
+    //         return response()->json([
+    //             'message' => 'Lesson already has a quiz'
+    //         ], 422);
+    //     }
+
+    //     $quiz = Quiz::create(array_merge(
+    //         $request->validated(),
+    //         ['quizzable_id' => $lesson_id, 'quizzable_type' => Lesson::class]
+    //     ));
+
+    //     return response()->json([
+    //         'message' => 'Quiz created successfully',
+    //         'quiz' => new QuizResource($quiz)
+    //     ], 201);
+    // }
 }

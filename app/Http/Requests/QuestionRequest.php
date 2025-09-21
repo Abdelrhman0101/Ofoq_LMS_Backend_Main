@@ -22,11 +22,12 @@ class QuestionRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'question_text' => 'required|string',
-            'question_type' => 'required|in:multiple_choice,true_false,short_answer',
+            'question'=>'required|string',
+            // 'question_text' => 'required|string',
+            // 'question_type' => 'required|in:multiple_choice,true_false,short_answer',
             'options' => 'required_if:question_type,multiple_choice|array',
             'correct_answer' => 'required|string',
-            'points' => 'required|integer|min:1',
+            // 'points' => 'required|integer|min:1',
         ];
 
         // For update requests, make fields optional

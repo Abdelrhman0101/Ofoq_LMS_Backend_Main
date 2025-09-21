@@ -24,9 +24,9 @@ class QuestionController extends Controller
         }
 
         $data = $request->validated();
-        if (isset($data['options'])) {
-            $data['options'] = json_encode($data['options']);
-        }
+        // if (isset($data['options'])) {
+        //     $data['options'] = json_encode($data['options']);
+        // }
         $data['quiz_id'] = $quiz_id;
 
         $question = Question::create($data);
@@ -51,9 +51,9 @@ class QuestionController extends Controller
         }
 
         $data = $request->validated();
-        if (isset($data['options'])) {
-            $data['options'] = json_encode($data['options']);
-        }
+        // if (isset($data['options'])) {
+        //     $data['options'] = json_encode($data['options']);
+        // }
 
         $question->update($data);
 

@@ -24,8 +24,8 @@ class QuizRequest extends FormRequest
         $rules = [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'passing_score' => 'required|integer|min:0|max:100',
-            'time_limit' => 'nullable|integer|min:1',
+            // 'passing_score' => 'required|integer|min:0|max:100',
+            // 'time_limit' => 'nullable|integer|min:1',
         ];
 
         // For update requests, make fields optional
