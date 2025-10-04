@@ -19,7 +19,9 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 // Route::prefix('auth')->group(function () {
 // });
-
+//public course routes
+Route::get('/allCourses', [CourseController::class, 'index']);
+Route::get('/courses/{id}', [CourseController::class, 'show']);
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes done
@@ -30,8 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin routes
     Route::middleware('role:admin')->group(function () {
         // Courses done
-        Route::get('/courses', [CourseController::class, 'index']);
-        Route::get('/courses/{id}', [CourseController::class, 'show']);
         Route::post('/courses', [CourseController::class, 'store']);
         Route::put('/courses/{id}', [CourseController::class, 'update']);
         Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
@@ -60,7 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // User/Student routes (accessible to authenticated users)
     // Courses - Public browsing and enrollment
-    Route::get('/courses', [UserCourseController::class, 'index']);
+    // Route::get('/courses', [UserCourseController::class, 'index']);
     Route::get('/courses/{id}', [UserCourseController::class, 'show']);
     Route::post('/courses/{id}/enroll', [UserCourseController::class, 'enroll']);
     Route::get('/my-enrollments', [UserCourseController::class, 'myEnrollments']);

@@ -44,13 +44,11 @@ class CourseController extends Controller
     {
         $validated = $request->validated();
 
-        // لو الكورس مجاني، نخلي السعر صفر
         if (!empty($validated['is_free']) && $validated['is_free']) {
             $validated['price'] = 0;
             $validated['discount_price'] = null;
         }
 
-        // إنشاء الكورس الجديد
         $course = Course::create($validated);
 
         return response()->json([
@@ -77,13 +75,11 @@ class CourseController extends Controller
     {
         $validated = $request->validated();
 
-        // لو الكورس مجاني → السعر صفر
         if (!empty($validated['is_free']) && $validated['is_free']) {
             $validated['price'] = 0;
             $validated['discount_price'] = null;
         }
 
-        // تحديث الكورس
         $course->update($validated);
 
         return response()->json([
