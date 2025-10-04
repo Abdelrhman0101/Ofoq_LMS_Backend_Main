@@ -13,6 +13,29 @@ class Chapter extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        "title",
+        "description",
+        "course_id",
+        "order"
+    ];
+
+    public function quiz()
+    {
+        return $this->morphOne(Quiz::class, 'quizzable');
+    }
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($chapter) {
+            $chapter->quiz()->delete();
+            foreach ($chapter->lessons as $lesson) {
+                $lesson->delete();
+            }
+        });
+    }
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
@@ -27,16 +50,6 @@ class Chapter extends Model
     // {
     //     return $this->hasOne(Quiz::class);
     // }
-     // Chapter has one quiz
-    public function quiz()
-    {
-        return $this->morphOne(Quiz::class, 'quizzable');
-    }
+    // Chapter has one quiz
 
-    protected $fillable = [
-        "title",
-        "description",
-        "course_id",
-        "order"
-    ];
 }

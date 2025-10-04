@@ -60,6 +60,7 @@ class CertificateController extends Controller
         $certificate = Certificate::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
+            'user_course_id' => $userCourse->id,
             'verification_token' => $verificationToken,
             'issued_at' => now(),
             'certificate_data' => json_encode([

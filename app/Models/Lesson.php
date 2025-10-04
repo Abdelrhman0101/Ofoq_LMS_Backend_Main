@@ -13,7 +13,7 @@ class Lesson extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::deleting(function ($lesson) {
             $lesson->quiz()->delete();
         });
@@ -31,13 +31,15 @@ class Lesson extends Model
     {
         return $this->morphOne(Quiz::class, 'quizzable');
     }
-
+    protected $casts = [
+        'resources' => 'array',
+    ];
     protected $fillable = [
         'chapter_id',
         'title',
         'content',
         'order',
-        'quizzable_type',
-        'quizzable_id',
+        'attachments',
+        'resources',
     ];
 }

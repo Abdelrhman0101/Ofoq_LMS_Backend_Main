@@ -15,8 +15,14 @@ class UserCourse extends Model
         'progress',
         'completed_at',
     ];
-     public function user(): BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
+
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
+    }
+
 }

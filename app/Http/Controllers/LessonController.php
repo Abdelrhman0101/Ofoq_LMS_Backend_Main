@@ -27,8 +27,13 @@ class LessonController extends Controller
         }
         $lesson = Lesson::create(array_merge(
             $data,
-            ['chapter_id' => $chapter_id]
+            [
+                'chapter_id' => $chapter_id,
+                // 'attachments' => $data['attachments'] ?? [],
+                'resources'  => $data['resources'] ?? [],
+            ]
         ));
+
 
 
         if (!empty($data['quiz'])) {
@@ -62,6 +67,9 @@ class LessonController extends Controller
             'message' => 'Lesson created successfully',
             'lesson' => new LessonResource($lesson->load('quiz.questions'))
         ], 201);
+        // return response()->json([
+        //     "date"=>$data,
+        // ]);
     }
 
     /**
@@ -97,7 +105,7 @@ class LessonController extends Controller
             // Handle Quiz operations
             if (isset($validatedData['quiz'])) {
                 $quizData = $validatedData['quiz'];
-                
+
                 // Check if user wants to delete the quiz
                 if (isset($quizData['delete']) && $quizData['delete']) {
                     if ($lesson->quiz) {
@@ -106,7 +114,7 @@ class LessonController extends Controller
                 } else {
                     // Update or create quiz
                     $quiz = $lesson->quiz;
-                    
+
                     if (!$quiz) {
                         // Create new quiz
                         $quiz = new Quiz();
@@ -137,8 +145,8 @@ class LessonController extends Controller
                             if (isset($questionData['delete']) && $questionData['delete']) {
                                 if (isset($questionData['id'])) {
                                     Question::where('id', $questionData['id'])
-                                           ->where('quiz_id', $quiz->id)
-                                           ->delete();
+                                        ->where('quiz_id', $quiz->id)
+                                        ->delete();
                                 }
                                 continue;
                             }
@@ -147,8 +155,8 @@ class LessonController extends Controller
                             if (isset($questionData['id'])) {
                                 // Update existing question
                                 $question = Question::where('id', $questionData['id'])
-                                                  ->where('quiz_id', $quiz->id)
-                                                  ->first();
+                                    ->where('quiz_id', $quiz->id)
+                                    ->first();
                                 if ($question) {
                                     $question->question = $questionData['question'];
                                     $question->type = $questionData['type'];

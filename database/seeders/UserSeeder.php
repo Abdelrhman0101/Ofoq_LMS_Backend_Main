@@ -2,36 +2,40 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\Course;
+use App\Models\UserCourse;
+use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Create Admin User
-        User::updateOrCreate(
-            ['email' => 'admin@ofoq.com'],
-            [
-                'name' => 'Admin User',
-                'password' => Hash::make('admin123'),
-                'role' => 'admin',
-            ]
-        );
+        $users = [
+            ['name' => 'Alice', 'email' => 'alice@example.com'],
+            ['name' => 'Bob', 'email' => 'bob@example.com'],
+            ['name' => 'Charlie', 'email' => 'charlie@example.com'],
+            ['name' => 'David', 'email' => 'david@example.com'],
+            ['name' => 'Eve', 'email' => 'eve@example.com'],
+        ];
 
-        // Create Test Student
-        User::updateOrCreate(
-            ['email' => 'student@ofoq.com'],
-            [
-                'name' => 'Test Student',
-                'password' => Hash::make('student123'),
-                'role' => 'student',
-            ]
-        );
+        foreach ($users as $userData) {
+            $user = User::firstOrCreate(
+                ['email' => $userData['email']],
+                [
+                    'name'     => $userData['name'],
+                    'password' => Hash::make('password123'),
+                ]
+            );
+
+            $courses = Course::inRandomOrder()->take(3)->get();
+            foreach ($courses as $course) {
+                UserCourse::firstOrCreate([
+                    'user_id'   => $user->id,
+                    'course_id' => $course->id,
+                ]);
+            }
+        }
     }
 }

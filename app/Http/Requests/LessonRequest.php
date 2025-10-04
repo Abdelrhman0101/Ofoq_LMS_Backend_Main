@@ -27,6 +27,8 @@ class LessonRequest extends FormRequest
             'content' => 'required|string',
             'video_url' => 'nullable|string|max:255',
             'order' => 'required|integer|min:1',
+            'attachments'=>'nullable|string',
+            'resources'=>'nullable|array',
             'chapter_id' => 'sometimes|required|exists:chapters,id',
             
             // Quiz
@@ -76,6 +78,9 @@ class LessonRequest extends FormRequest
             'order.required' => 'Lesson order is required',
             'order.integer' => 'Lesson order must be a number',
             'order.min' => 'Lesson order must be at least 1',
+            'attachments.string'=>'Attachments must be a string',
+            'resources.array'=>'Resources must be a json string',
+
 
             // quiz
             'quiz.title.required_with' => 'Quiz title is required when adding a quiz',

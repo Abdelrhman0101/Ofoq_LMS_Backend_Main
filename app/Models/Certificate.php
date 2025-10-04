@@ -12,6 +12,7 @@ class Certificate extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'user_course_id',
         'verification_token',
         'file_path',
         'certificate_data',
@@ -22,7 +23,21 @@ class Certificate extends Model
         'issued_at' => 'datetime',
         'certificate_data' => 'array'
     ];
+    public function userCourse(): BelongsTo
+    {
+        return $this->belongsTo(UserCourse::class);
+    }
 
+    // Accessors shortcuts
+    public function getUserAttribute()
+    {
+        return $this->userCourse->user;
+    }
+
+    public function getCourseAttribute()
+    {
+        return $this->userCourse->course;
+    }
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
