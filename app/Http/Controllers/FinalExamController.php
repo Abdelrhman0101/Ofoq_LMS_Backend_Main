@@ -95,6 +95,8 @@ class FinalExamController extends Controller
 
         if ($score >= 85 && $userCourse && !$userCourse->certificate) {
             Certificate::create([
+                'user_id' => Auth::id(),
+                'course_id' => $course->id,
                 'user_course_id' => $userCourse->id,
                 'verification_token' => \Illuminate\Support\Str::uuid(),
                 'issued_at' => now(),

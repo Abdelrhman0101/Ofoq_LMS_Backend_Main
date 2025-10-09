@@ -13,15 +13,7 @@ class UpdateCoursePublishStatusSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        $courses = Course::all();
-
-        foreach ($courses as $course) {
-            $course->update([
-                'is_published' => (bool)random_int(0, 1),
-            ]);
-        }
-
-        echo "✅ Courses updated with random publish status.\n";
+        $updated = Course::withoutGlobalScope('published')->update(['is_published' => 1]);
+        $this->command->info("✅ All {$updated} courses have been published successfully!");
     }
 }

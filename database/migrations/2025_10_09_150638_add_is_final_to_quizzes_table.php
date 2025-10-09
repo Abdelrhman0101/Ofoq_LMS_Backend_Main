@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::table('quizzes', function (Blueprint $table) {
             //
+            $table->boolean('is_final')->default(true);
         });
     }
 
@@ -23,6 +24,7 @@ return new class extends Migration
     {
         Schema::table('quizzes', function (Blueprint $table) {
             //
+            $table->dropColumn('is_final');
         });
     }
 };

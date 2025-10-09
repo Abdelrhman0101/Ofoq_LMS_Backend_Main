@@ -23,12 +23,12 @@ class Course extends Model
         });
     }
 
-    protected static function booted(): void
-    {
-        static::addGlobalScope('published', function (Builder $builder) {
-            $builder->where('is_published', true);
-        });
-    }
+    // protected static function booted(): void
+    // {
+    //     static::addGlobalScope('published', function (Builder $builder) {
+    //         $builder->where('is_published', true);
+    //     });
+    // }
 
     public function chapters(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
@@ -77,11 +77,14 @@ class Course extends Model
     }
 
 
-    protected static function boott()
+    protected static function booted()
     {
+        static::addGlobalScope('published', function (Builder $builder) {
+            $builder->where('is_published', true);
+        });
         static::created(function ($course) {
             if (!$course->finalExam) {
-                Quiz::create([
+                \App\Models\Quiz::create([
                     'title' => 'Final Exam - ' . $course->title,
                     'is_final' => true,
                     'quizzable_type' => self::class,
@@ -90,7 +93,6 @@ class Course extends Model
             }
         });
     }
-
 
     protected $casts = [
         'is_free' => 'boolean',
