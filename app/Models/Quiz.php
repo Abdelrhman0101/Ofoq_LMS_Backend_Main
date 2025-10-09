@@ -15,6 +15,10 @@ class Quiz extends Model
     {
         return $this->morphTo();
     }
+    public function userAttempts()
+    {
+        return $this->hasMany(UserQuizAttempt::class, 'quiz_id');
+    }
 
     public function questions(): HasMany
     {
@@ -25,8 +29,12 @@ class Quiz extends Model
         'description',
         'quizzable_type',
         'quizzable_id',
+        'is_final',
         // 'passing_score',
         // 'time_limit',
     ];
 
+    protected $casts = [
+        'is_final' => 'boolean',
+    ];
 }

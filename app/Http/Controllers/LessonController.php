@@ -80,102 +80,70 @@ class LessonController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get validated data
             $validatedData = $request->validated();
 
-            // Find the lesson
+            // 🧩 Find the lesson
             $lesson = Lesson::findOrFail($id);
 
-            // Update lesson basic data
-            if (isset($validatedData['title'])) {
-                $lesson->title = $validatedData['title'];
-            }
-            if (isset($validatedData['content'])) {
-                $lesson->content = $validatedData['content'];
-            }
-            if (isset($validatedData['order'])) {
-                $lesson->order = $validatedData['order'];
-            }
-            if (isset($validatedData['chapter_id'])) {
-                $lesson->chapter_id = $validatedData['chapter_id'];
+            // 🧱 Update lesson basic data
+            $fields = [
+                'title',
+                'content',
+                'order',
+                'chapter_id',
+                'is_visible',
+                'video_url',
+                'attachments',
+                'resources'
+            ];
+
+            foreach ($fields as $field) {
+                if (isset($validatedData[$field])) {
+                    $lesson->{$field} = $validatedData[$field];
+                }
             }
 
             $lesson->save();
 
-            // Handle Quiz operations
+            // 🎯 Handle Quiz
             if (isset($validatedData['quiz'])) {
                 $quizData = $validatedData['quiz'];
 
-                // Check if user wants to delete the quiz
-                if (isset($quizData['delete']) && $quizData['delete']) {
+                // 🗑️ Delete quiz if requested
+                if (!empty($quizData['delete']) && $quizData['delete'] == true) {
                     if ($lesson->quiz) {
                         $lesson->quiz->delete();
                     }
                 } else {
-                    // Update or create quiz
-                    $quiz = $lesson->quiz;
+                    // 📘 Create or update quiz
+                    $quiz = $lesson->quiz ?? new Quiz([
+                        'quizzable_type' => Lesson::class,
+                        'quizzable_id'   => $lesson->id,
+                    ]);
 
-                    if (!$quiz) {
-                        // Create new quiz
-                        $quiz = new Quiz();
-                        $quiz->quizzable_type = Lesson::class;
-                        $quiz->quizzable_id = $lesson->id;
-                    }
-
-                    // Update quiz data
                     if (isset($quizData['title'])) {
                         $quiz->title = $quizData['title'];
                     }
-                    // if (isset($quizData['description'])) {
-                    //     $quiz->description = $quizData['description'];
-                    // }
-                    // if (isset($quizData['passing_score'])) {
-                    //     $quiz->passing_score = $quizData['passing_score'];
-                    // }
-                    // if (isset($quizData['time_limit'])) {
-                    //     $quiz->time_limit = $quizData['time_limit'];
-                    // }
 
                     $quiz->save();
 
-                    // Handle Questions
-                    if (isset($quizData['questions'])) {
-                        foreach ($quizData['questions'] as $questionData) {
-                            // Check if user wants to delete this question
-                            if (isset($questionData['delete']) && $questionData['delete']) {
-                                if (isset($questionData['id'])) {
-                                    Question::where('id', $questionData['id'])
-                                        ->where('quiz_id', $quiz->id)
-                                        ->delete();
-                                }
-                                continue;
-                            }
+                    // 🧨 Replace old questions with new ones
+                    if (isset($quizData['questions']) && is_array($quizData['questions'])) {
+                        // 🧹 Delete all existing questions for this quiz
+                        $quiz->questions()->delete();
 
-                            // Update existing question or create new one
-                            if (isset($questionData['id'])) {
-                                // Update existing question
-                                $question = Question::where('id', $questionData['id'])
-                                    ->where('quiz_id', $quiz->id)
-                                    ->first();
-                                if ($question) {
-                                    $question->question = $questionData['question'];
-                                    $question->type = $questionData['type'];
-                                    $question->options = isset($questionData['options']) ? json_encode($questionData['options']) : null;
-                                    $question->correct_answer = $questionData['correct_answer'];
-                                    $question->points = $questionData['points'] ?? 1;
-                                    $question->save();
-                                }
-                            } else {
-                                // Create new question
-                                $question = new Question();
-                                $question->quiz_id = $quiz->id;
-                                $question->question = $questionData['question'];
-                                $question->type = $questionData['type'];
-                                $question->options = isset($questionData['options']) ? json_encode($questionData['options']) : null;
-                                $question->correct_answer = $questionData['correct_answer'];
-                                $question->points = $questionData['points'] ?? 1;
-                                $question->save();
-                            }
+                        // ➕ Insert new questions
+                        foreach ($quizData['questions'] as $questionData) {
+                            Question::create([
+                                'quiz_id' => $quiz->id,
+                                'question' => $questionData['question'] ?? '',
+                                'type' => $questionData['type'] ?? 'multiple_choice',
+                                'options' => isset($questionData['options'])
+                                    ? json_encode($questionData['options'])
+                                    : null,
+                                'correct_answer' => $questionData['correct_answer'] ?? '',
+                                'points' => $questionData['points'] ?? 1,
+                            ]);
                         }
                     }
                 }
@@ -183,24 +151,25 @@ class LessonController extends Controller
 
             DB::commit();
 
-            // Load the updated lesson with relationships
+            // 📦 Reload the relationships
             $lesson->load(['quiz.questions', 'chapter']);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Lesson updated successfully',
-                'data' => new LessonResource($lesson->load('quiz.questions'))
+                'data' => new LessonResource($lesson),
             ], 200);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update lesson',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
+
+
 
     /**
      * Remove the specified lesson
@@ -246,5 +215,4 @@ class LessonController extends Controller
             'quiz' => $quiz
         ], 201);
     }
-
 }

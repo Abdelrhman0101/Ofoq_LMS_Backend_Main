@@ -1,9 +1,12 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
+
 
 class Certificate extends Model
 {
@@ -23,7 +26,7 @@ class Certificate extends Model
         'issued_at' => 'datetime',
         'certificate_data' => 'array'
     ];
-    public function userCourse(): BelongsTo
+    public function userCourse()
     {
         return $this->belongsTo(UserCourse::class);
     }
@@ -67,8 +70,8 @@ class Certificate extends Model
     /**
      * Check if certificate file exists
      */
-    public function hasFile(): bool
-    {
-        return $this->file_path && \Storage::disk('public')->exists($this->file_path);
-    }
+    // public function hasFile(): bool
+    // {
+    //     return $this->file_path && \Storage::disk('public')->exists($this->file_path);
+    // }
 }

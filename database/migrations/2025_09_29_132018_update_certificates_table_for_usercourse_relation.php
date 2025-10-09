@@ -23,10 +23,9 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('certificates', function (Blueprint $table) {
-            //
-            $table->dropColumn('user_course_id');
-
+            $table->dropForeign(['user_course_id']);
             $table->dropUnique(['user_course_id']);
+            $table->dropColumn('user_course_id');
         });
     }
 };

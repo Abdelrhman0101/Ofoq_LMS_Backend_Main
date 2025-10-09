@@ -33,6 +33,7 @@ class Lesson extends Model
     }
     protected $casts = [
         'resources' => 'array',
+        'is_visible' => 'boolean',
     ];
     protected $fillable = [
         'chapter_id',
@@ -41,5 +42,7 @@ class Lesson extends Model
         'order',
         'attachments',
         'resources',
+        'is_visible',
+        'video_url',
     ];
 }

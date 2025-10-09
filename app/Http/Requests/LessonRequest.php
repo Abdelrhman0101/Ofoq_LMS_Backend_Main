@@ -25,10 +25,11 @@ class LessonRequest extends FormRequest
             // Lesson
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'video_url' => 'nullable|string|max:255',
+            'video_url' => 'required|string|max:255',
             'order' => 'required|integer|min:1',
             'attachments'=>'nullable|string',
             'resources'=>'nullable|array',
+            'is_visible'=>'required|boolean',
             'chapter_id' => 'sometimes|required|exists:chapters,id',
             
             // Quiz
@@ -80,8 +81,9 @@ class LessonRequest extends FormRequest
             'order.min' => 'Lesson order must be at least 1',
             'attachments.string'=>'Attachments must be a string',
             'resources.array'=>'Resources must be a json string',
-
-
+            'video_url.required'=>'Video url is required',
+            'is_visible.required'=>'Is visible is required',
+            // 'video_url.max'=>'Video url cannot exceed 255 characters',
             // quiz
             'quiz.title.required_with' => 'Quiz title is required when adding a quiz',
             'quiz.title.max' => 'Quiz title cannot exceed 255 characters',

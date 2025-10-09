@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Models\Review;
 use App\Models\Course;
 use App\Models\Reviews;
 

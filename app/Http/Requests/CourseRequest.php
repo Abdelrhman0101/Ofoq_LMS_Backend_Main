@@ -30,7 +30,8 @@ class CourseRequest extends FormRequest
             'discount_ends_at'   => 'nullable|date|after:now',
             'price'              => 'required|numeric|min:0',
             'is_free'            => 'boolean',
-            'instructor_id'      => 'nullable|integer|exists:users,id',
+            'is_published'       => 'boolean',
+            'instructor_id'      => 'required|exists:instructors,id',
             'name_instructor'    => 'nullable|string|max:255',
             'bio_instructor'     => 'nullable|string|max:1000',
             'image_instructor'   => 'nullable|string|max:255',
@@ -39,7 +40,7 @@ class CourseRequest extends FormRequest
             'students_count'     => 'nullable|integer|min:0',
             'hours_count'        => 'nullable|integer|min:0',
             'reviews_count'      => 'nullable|integer|min:0',
-            'image'              => 'nullable|string|max:255',
+            'cover_image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
 
 
@@ -84,12 +85,14 @@ class CourseRequest extends FormRequest
 
             'is_free.boolean' => 'Free status must be true or false',
 
+            'instructor_id.required' => 'Instructor ID is required',
             'instructor_id.exists' => 'Instructor ID must refer to an existing user',
 
             'chapters_count.integer' => 'Chapters count must be a number',
             'students_count.integer' => 'Students count must be a number',
             'hours_count.integer' => 'Hours count must be a number',
             'reviews_count.integer' => 'Reviews count must be a number',
+            'is_published.boolean' => 'Published status must be true or false',
         ];
     }
 }

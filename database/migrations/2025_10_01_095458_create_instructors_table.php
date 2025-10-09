@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal('rating', 3, 1)->default(0);
             $table->integer('courses_count')->default(0);
             $table->integer('students_count')->default(0);
+            $table->decimal('avg_rate', 3, 1)->default(0); // متوسط تقييم كورسات الانستراكتور
             $table->timestamps();
         });
     }

@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ReviewsSeeder::class,
             FeaturedCourseSeeder::class,
+            UserCoursesSeeder::class,
         ]);
     }
 }

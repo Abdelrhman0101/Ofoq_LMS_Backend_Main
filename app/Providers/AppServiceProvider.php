@@ -7,6 +7,12 @@ use App\Observers\ReviewObserver;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Http\Request;
+use App\Models\User;
+
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -22,6 +28,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+        });
+
+        RateLimiter::for(User::class . '::api', function (Request $request) {
+            return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+        });
+
         Route::prefix('api/admin')
             ->middleware('api')
             ->group(base_path('routes/admin.php'));

@@ -26,18 +26,17 @@ class CourseSeeder extends Seeder
 
         foreach ($courseTitles as $title) {
             $course = Course::create([
-                'title'       => $title,
-                'description' => "Comprehensive {$title} course with practical examples.",
-                // 'level'       => ['Beginner', 'Intermediate', 'Advanced'][array_rand([0, 1, 2])],
-                // 'duration'    => rand(10, 30) . 'h',
-                'price'       => rand(49, 299),
+                'title'        => $title,
+                'description'  => "Comprehensive {$title} course with practical examples.",
+                'category'     => ['Programming', 'Web Development', 'Mobile Apps', 'Software Engineering'][array_rand([0,1,2,3])],
+                'price'        => rand(49, 299),
+                'cover_image'  => 'courses/cover_images/Nlgtzbo2KxpKO5jq1i2bf0xjO7klAQ8HTrKVyK1I.png', // ✅ الصورة
             ]);
 
             // 🟢 5 Chapters لكل كورس
             for ($c = 1; $c <= 5; $c++) {
                 $chapter = Chapter::create([
                     'title'       => "Chapter {$c} of {$title}",
-                    // 'description' => "Details for Chapter {$c} of {$title}",
                     'order'       => $c,
                     'course_id'   => $course->id,
                 ]);

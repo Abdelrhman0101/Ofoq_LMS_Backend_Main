@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\QuizController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('courses/details', [CourseController::class, 'details']);
 Route::apiResource('courses', CourseController::class);
 
 Route::post('courses/{course}/chapters', [ChapterController::class, 'store']);
