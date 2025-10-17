@@ -45,8 +45,12 @@ class SocialAuthController extends Controller
             return redirect($frontendUrl . '/auth?token=' . $token);
 
         } catch (\Exception $e) {
-            // Handle exceptions, e.g., redirect to a failure page
-            return response()->json(['error' => 'Unable to login using Google. Please try again.'], 401);
+            // Log the error for debugging
+            \Log::error('Google OAuth Error: ' . $e->getMessage());
+            
+            // Redirect to frontend with error instead of returning JSON
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth?error=google_login_failed');
         }
     }
 }
