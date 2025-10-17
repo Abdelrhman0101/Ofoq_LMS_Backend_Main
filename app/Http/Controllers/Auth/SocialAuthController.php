@@ -40,15 +40,9 @@ class SocialAuthController extends Controller
             // Create a token for the user
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Here you should redirect the user to your frontend with the token
-            // For example: return redirect('http://your-frontend-url/login?token=' . $token);
-
-            return response()->json([
-                'message' => 'User logged in successfully.',
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'user' => $user
-            ]);
+            // Redirect the user to your frontend with the token
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth?token=' . $token);
 
         } catch (\Exception $e) {
             // Handle exceptions, e.g., redirect to a failure page
