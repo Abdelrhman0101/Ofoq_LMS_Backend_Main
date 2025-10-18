@@ -18,7 +18,7 @@ class QuizResource extends JsonResource
     {
         $isAdmin = Auth::user()?->role === 'admin';
         return [
-            // 'id' => $this->id,
+            'id' => $this->id,
             'title' => $this->title,
             // 'chapter_id' => $this->chapter_id,
             // لو عندك علاقة polymorphic
