@@ -186,7 +186,6 @@ class CoursesSeeder extends Seeder
                 'description'      => $data['course_description'] ?? 'هذا الكورس متاح للعرض فقط، وسيتم تحديث المحتوى لاحقاً.',
                 'instructor_id'    => $instructor->id,
                 'category_id'      => $category->id,
-                'category'         => $data['category_name'],
                 'cover_image'      => $instructorImg,
                 'price'            => 0.00,
                 'is_free'          => true,
