@@ -8,6 +8,9 @@ use App\Http\Resources\CourseResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\BlockedUser;
+use Illuminate\Support\Facades\Schema;
+use App\Models\UserQuizAttempt;
 
 class UserCourseController extends Controller
 {
@@ -158,59 +161,74 @@ class UserCourseController extends Controller
     // }
 
 
-    public function studentCoursesStatus()
+    public function studentCoursesStatus(Request $request)
     {
-        $students = User::with([
-            'enrollments' => function ($query) {
-                $query->with([
-                    'course',
-                    'certificate',
-                    'course.finalExam.userAttempts' => function ($attemptQuery) {
-                        $attemptQuery->select('id', 'quiz_id', 'user_id', 'score', 'passed');
-                    },
-                ]);
-            }
-        ])->whereHas('enrollments')->get();
+        try {
+            $perPage = $request->get('per_page', 10);
+            
+            $students = User::with([
+                'enrollments' => function ($query) {
+                    $query->with([
+                        'course' => function ($courseQuery) {
+                            $courseQuery->with(['instructor', 'category', 'finalExam']);
+                        },
+                        'certificate'
+                    ]);
+                }
+            ])
+            ->whereHas('enrollments')
+            ->where('is_blocked', false)
+            ->paginate($perPage);
 
-        $data = $students->map(function ($student) {
-            $courses = $student->enrollments
-                ->filter(fn($enrollment) => $enrollment->course !== null)
-                ->values()
-                ->map(function ($enrollment) use ($student) {
-                    $course = $enrollment->course;
-                    $finalExam = $course->finalExam;
+            $studentsData = $students->getCollection()->map(function ($student) {
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'email' => $student->email,
+                    'courses' => $student->enrollments->map(function ($enrollment) {
+                        $course = $enrollment->course;
+                        $finalExamScore = null;
+                        
+                        if ($course->finalExam) {
+                            $quizAttempt = \App\Models\QuizAttempt::where('user_id', $enrollment->user_id)
+                                ->where('quiz_id', $course->finalExam->id)
+                                ->orderBy('created_at', 'desc')
+                                ->first();
+                            
+                            if ($quizAttempt) {
+                                $finalExamScore = $quizAttempt->score;
+                            }
+                        }
+                        
+                        return [
+                            'id' => $course->id,
+                            'title' => $course->title,
+                            'instructor' => $course->instructor?->name,
+                            'category' => $course->category?->name,
+                            'cover_image_url' => $course->cover_image_url,
+                            'status' => $enrollment->status,
+                            'progress_percentage' => $enrollment->progress_percentage,
+                            'completed_at' => $enrollment->completed_at,
+                            'final_exam_score' => $finalExamScore,
+                            'certificate_id' => $enrollment->certificate?->id,
+                        ];
+                    })
+                ];
+            });
 
-                    $attempts = $finalExam
-                        ? $finalExam->userAttempts->where('user_id', $student->id)
-                        : collect();
-
-                    // ✅ التعديل هنا: أخذ أعلى درجة بدلاً من آخر محاولة
-                    $bestAttempt = $attempts->sortByDesc('score')->first();
-                    $finalExamScore = $bestAttempt?->score;
-                    $attemptCount = $attempts->count();
-
-                    return [
-                        'course_id' => $course->id,
-                        'course_title' => $course->title,
-                        'status' => $enrollment->status,
-                        'certificate_issued' => (bool) $enrollment->certificate,
-                        'issued_at' => $enrollment->certificate?->issued_at,
-                        'final_exam_score' => $finalExamScore,
-                        'attempts_count' => $attemptCount,
-                    ];
-                });
-
-            return [
-                'student_id' => $student->id,
-                'student_name' => $student->name,
-                'total_courses' => $student->enrollments->count(),
-                'courses' => $courses,
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Students with course statuses fetched successfully.',
-            'data' => $data,
-        ]);
+            return response()->json([
+                'data' => $studentsData,
+                'pagination' => [
+                    'current_page' => $students->currentPage(),
+                    'last_page' => $students->lastPage(),
+                    'per_page' => $students->perPage(),
+                    'total' => $students->total(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in studentCoursesStatus: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json(['error' => 'Internal server error'], 500);
+        }
     }
 }

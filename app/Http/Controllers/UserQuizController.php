@@ -22,7 +22,7 @@ class UserQuizController extends Controller
 
         // Find quiz for this chapter
         $quiz = Quiz::where('chapter_id', $chapterId)
-            ->with(['chapter.course', 'questions.answers'])
+            ->with(['chapter.course', 'questions'])
             ->first();
 
         if (!$quiz) {
@@ -87,12 +87,13 @@ class UserQuizController extends Controller
         $request->validate([
             'answers' => 'required|array',
             'answers.*.question_id' => 'required|exists:questions,id',
-            'answers.*.selected_answers' => 'required|array',
+            'answers.*.selected_indices' => 'required_without:answers.*.selected_answers|array',
+            'answers.*.selected_answers' => 'sometimes|array',
             'time_taken' => 'nullable|integer|min:0'
         ]);
 
         $user = Auth::user();
-        $quiz = Quiz::with(['chapter.course', 'questions.answers'])->find($quizId);
+        $quiz = Quiz::with(['chapter.course', 'questions'])->find($quizId);
 
         if (!$quiz) {
             return response()->json([
@@ -124,7 +125,7 @@ class UserQuizController extends Controller
             ], 403);
         }
 
-        // Calculate score
+        // Calculate score (index-based evaluation)
         $result = $this->calculateQuizScore($quiz, $request->answers);
 
         // Store attempt
@@ -200,15 +201,12 @@ class UserQuizController extends Controller
         // Shuffle and take required number
         $selectedQuestions = $availableQuestions->shuffle()->take($questionsPerQuiz);
 
-        // Shuffle answers for each question
-        return $selectedQuestions->map(function ($question) {
-            $question->answers = $question->answers->shuffle();
-            return $question;
-        });
+        // Do not shuffle options, as correct_answer indices correspond to current options order
+        return $selectedQuestions;
     }
 
     /**
-     * Calculate quiz score
+     * Calculate quiz score using option indices
      */
     private function calculateQuizScore($quiz, $userAnswers)
     {
@@ -217,18 +215,25 @@ class UserQuizController extends Controller
         $questionResults = [];
 
         foreach ($userAnswers as $userAnswer) {
-            $question = $quiz->questions()->with('answers')->find($userAnswer['question_id']);
+            $question = $quiz->questions()->find($userAnswer['question_id']);
 
             if (!$question) {
                 continue;
             }
 
-            $correctAnswerIds = $question->answers()->where('is_correct', true)->pluck('id')->toArray();
-            $userSelectedIds = $userAnswer['selected_answers'];
+            $correctIndices = is_array($question->correct_answer) ? $question->correct_answer : [$question->correct_answer];
+            $correctIndices = array_map('intval', $correctIndices);
+            sort($correctIndices);
 
-            // Check if user's selection matches correct answers exactly
-            $isCorrect = empty(array_diff($correctAnswerIds, $userSelectedIds)) &&
-                empty(array_diff($userSelectedIds, $correctAnswerIds));
+            $userSelected = $userAnswer['selected_indices'] ?? ($userAnswer['selected_answers'] ?? []);
+            if (!is_array($userSelected)) {
+                $userSelected = [$userSelected];
+            }
+            $userSelected = array_map('intval', $userSelected);
+            sort($userSelected);
+
+            // Compare indices ignoring order
+            $isCorrect = ($correctIndices === $userSelected);
 
             if ($isCorrect) {
                 $correctAnswers++;
@@ -236,10 +241,11 @@ class UserQuizController extends Controller
 
             $questionResults[] = [
                 'question_id' => $question->id,
-                'question_text' => $question->question_text,
-                'user_answers' => $userSelectedIds,
-                'correct_answers' => $correctAnswerIds,
-                'is_correct' => $isCorrect
+                'question_text' => $question->question,
+                'user_selected_indices' => $userSelected,
+                'correct_indices' => $correctIndices,
+                'is_correct' => $isCorrect,
+                'explanation' => $question->explanation,
             ];
         }
 

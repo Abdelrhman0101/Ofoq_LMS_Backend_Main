@@ -57,8 +57,20 @@ class CourseController extends Controller
             $validated = $request->validated();
             \Log::info('Validation passed', ['validated_data' => $validated]);
 
-            // Extract chapters data before creating course
-            $chaptersData = $validated['chapters'] ?? [];
+            // Extract chapters data before creating course (allow raw JSON from FormData)
+            $chaptersData = $request->input('chapters', []);
+            if (is_string($chaptersData)) {
+                $decoded = json_decode($chaptersData, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $chaptersData = $decoded;
+                } else {
+                    \Log::warning('Invalid chapters JSON provided', ['chapters' => $chaptersData]);
+                    $chaptersData = [];
+                }
+            }
+            if (!is_array($chaptersData)) {
+                $chaptersData = [];
+            }
             unset($validated['chapters']); // Remove from course data
             
             // Remove status field if present (frontend compatibility)
@@ -109,7 +121,7 @@ class CourseController extends Controller
                             
                             $lesson = $chapter->lessons()->create([
                                 'title' => $lessonData['title'],
-                                'content' => $lessonData['content'] ?? null,
+                                'content' => $lessonData['content'] ?? '',
                                 'order' => $lessonData['order'] ?? 1,
                                 'video_url' => $lessonData['video_url'] ?? null,
                                 'resources' => $lessonData['resources'] ?? [],

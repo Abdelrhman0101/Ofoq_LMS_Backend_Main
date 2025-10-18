@@ -84,9 +84,15 @@ class Course extends Model
 
     protected static function booted()
     {
+        // Only apply published scope for non-admin routes
         static::addGlobalScope('published', function (Builder $builder) {
-            $builder->where('is_published', true);
+            // Check if we're in an admin context
+            $request = request();
+            if ($request && !str_starts_with($request->path(), 'api/admin')) {
+                $builder->where('is_published', true);
+            }
         });
+        
         static::created(function ($course) {
             if (!$course->finalExam) {
                 \App\Models\Quiz::create([
@@ -105,7 +111,6 @@ class Course extends Model
     ];
     protected $fillable = [
         'title',
-        'category',
         'description',
         'price',
         'is_free',

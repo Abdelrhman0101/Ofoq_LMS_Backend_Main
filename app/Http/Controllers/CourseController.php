@@ -33,11 +33,12 @@ class CourseController extends Controller
 
     public function search(Request $request)
     {
+        $perPage = (int) $request->input('per_page', 12);
         $courses = Course::query()
             ->search($request->input('search'))
             ->field($request->input('field'))
             ->sort($request->input('sort'))
-            ->paginate(12);
+            ->paginate($perPage);
 
         $courses->loadCount(['chapters', 'lessons', 'reviews']);
         $courses->loadAvg('reviews', 'rating');

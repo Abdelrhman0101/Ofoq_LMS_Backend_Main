@@ -153,6 +153,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Final Exam
+    Route::get('/courses/{course}/final-exam/meta', [FinalExamController::class, 'meta']);
     Route::post('/courses/{course}/final-exam/start', [FinalExamController::class, 'start']);
     Route::post('/courses/{course}/final-exam/submit/{attempt}', [FinalExamController::class, 'submit']);
     }); // end not_blocked group

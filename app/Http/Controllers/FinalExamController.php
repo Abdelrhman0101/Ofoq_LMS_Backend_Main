@@ -121,6 +121,35 @@ class FinalExamController extends Controller
             'total_questions' => $totalQuestions,
         ]);
     }
+
+    public function meta(Course $course)
+    {
+        $user = Auth::user();
+
+        $finalExam = $course->finalExam;
+        if (!$finalExam) {
+            return response()->json(['success' => false, 'message' => 'Final exam not found for this course.'], 404);
+        }
+
+        // Count available questions across all lesson quizzes in the course
+        $lessonQuizIds = $course->lessons()->with('quiz')->get()->pluck('quiz.id')->filter();
+        $questionsCount = Question::whereIn('quiz_id', $lessonQuizIds)->count();
+
+        // User attempts count for the final exam
+        $attemptsCount = UserQuizAttempt::where('user_id', $user->id)
+            ->where('quiz_id', $finalExam->id)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'quiz_id' => $finalExam->id,
+                'questions_pool_count' => $questionsCount,
+                'has_sufficient_question_bank' => $questionsCount >= 20,
+                'attempts_count' => $attemptsCount,
+            ],
+        ]);
+    }
 }
 /**
  * Display a listing of the resource.

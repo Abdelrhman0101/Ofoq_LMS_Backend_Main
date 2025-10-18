@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\UserCourse;
 use App\Models\Certificate;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -163,7 +164,7 @@ class CertificateController extends Controller
     }
 
     /**
-     * Get user's certificates
+     * Get user's certificates (authenticated user)
      */
     public function myCertificates()
     {
@@ -183,6 +184,38 @@ class CertificateController extends Controller
                     'course_title' => $certificate->course->title,
                     'issued_at' => $certificate->issued_at->format('F d, Y'),
                     'completion_date' => $certificateData['completion_date'] ?? null,
+                    'verification_token' => $certificate->verification_token,
+                    'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
+                    'download_url' => url("/api/courses/{$certificate->course_id}/certificate")
+                ];
+            })
+        ]);
+    }
+
+    /**
+     * Admin: Get certificates for a specific user
+     */
+    public function userCertificatesAdmin(User $user)
+    {
+        $certificates = Certificate::where('user_id', $user->id)
+                                  ->with('course')
+                                  ->orderBy('issued_at', 'desc')
+                                  ->get();
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'certificates' => $certificates->map(function($certificate) {
+                $data = json_decode($certificate->certificate_data, true);
+                return [
+                    'id' => $certificate->id,
+                    'course_id' => $certificate->course_id,
+                    'course_title' => $certificate->course->title,
+                    'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
+                    'completion_date' => $data['completion_date'] ?? null,
                     'verification_token' => $certificate->verification_token,
                     'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
                     'download_url' => url("/api/courses/{$certificate->course_id}/certificate")
