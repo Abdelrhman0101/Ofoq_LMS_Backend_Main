@@ -21,6 +21,8 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:20|unique:users',
+            'nationality' => 'nullable|string|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -28,26 +30,31 @@ class AuthController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
+        $validated = $validator->validated();
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'nationality' => $validated['nationality'] ?? null,
+            'password' => Hash::make($validated['password']),
             'role' => 'student', // Only students can signup
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => [
+            'user' => array_filter([
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'nationality' => $user->nationality,
                 'role' => $user->role,
-            ],
-            'access_token' => $token,
-            'token_type' => 'Bearer',
+            ], fn($value) => !is_null($value)),
+            'token' => $token
         ], 201);
+
     }
 
     /**
@@ -56,8 +63,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
+            'login' => 'required|string',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -66,9 +73,11 @@ class AuthController extends Controller
             ], 422);
         }
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        $loginType = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+
+        if (!Auth::attempt([$loginType => $request->login, 'password' => $request->password])) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'login' => ['The provided credentials are incorrect.'],
             ]);
         }
 
@@ -76,15 +85,16 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => [
+            'user' => array_filter([
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'nationality' => $user->nationality,
                 'role' => $user->role,
-            ],
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+            ], fn($value) => !is_null($value)),
+            'token' => $token
+        ], 201);
     }
 
     /**
