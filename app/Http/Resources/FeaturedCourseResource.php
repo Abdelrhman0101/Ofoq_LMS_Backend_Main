@@ -12,10 +12,6 @@ class FeaturedCourseResource extends JsonResource
      *
      * @return array<string, mixed>
      */
-    // public function toArray(Request $request): array
-    // {
-    //     return parent::toArray($request);
-    // }
     public function toArray($request)
     {
         $course = $this->course;
@@ -39,6 +35,16 @@ class FeaturedCourseResource extends JsonResource
                     ? round($course->reviews_avg_rating, 1)
                     : null,
 
+                // التصنيف (لو مُحمّل من الكنترولر)
+                'category' => $course->category ? [
+                    'id' => $course->category->id,
+                    'name' => $course->category->name,
+                ] : (
+                    ($course->category || $course->category_id)
+                        ? ['id' => $course->category_id, 'name' => $course->category]
+                        : null
+                ),
+
                 'instructor' => $course->instructor ? [
                     'id' => $course->instructor->id,
                     'name' => $course->instructor->name,
@@ -51,9 +57,5 @@ class FeaturedCourseResource extends JsonResource
                 ] : null,
             ] : null,
         ];
-
-        // // relations
-        // 'chapters' => ChapterResource::collection($course->whenLoaded('chapters')),
-        // 'reviews' => ReviewResource::collection($course->whenLoaded('reviews')),
     }
 }

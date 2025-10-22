@@ -35,6 +35,7 @@ class CourseController extends Controller
     {
         $perPage = (int) $request->input('per_page', 12);
         $courses = Course::query()
+            ->with('category')
             ->search($request->input('search'))
             ->field($request->input('field'))
             ->sort($request->input('sort'))
@@ -96,7 +97,8 @@ class CourseController extends Controller
             ->with(['course' => function ($q) {
                 $q->withCount(['chapters', 'reviews'])
                     ->withAvg('reviews', 'rating')
-                    ->with('instructor');
+                    ->with('instructor')
+                    ->with('category');
             }]);
 
         $featured = $query->paginate($perPage);

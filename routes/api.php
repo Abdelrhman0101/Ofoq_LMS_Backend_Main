@@ -16,6 +16,7 @@ use App\Http\Controllers\UserQuizController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\UserFavoriteCourseController;
+use App\Http\Controllers\DiplomaController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\SocialAuthController;
@@ -28,6 +29,8 @@ use App\Http\Controllers\Admin\BlockedUserController; // added
 Route::get('/allCourses', [CourseController::class, 'search']);
 Route::get('/course/{course}', [CourseController::class, 'show']);
 Route::get('/courses/featured', [CourseController::class, 'featured']);
+// دبلومات (أقسام) عامة
+Route::get('/diplomas', [DiplomaController::class, 'index']);
 
 // Public authentication routes
 Route::post('/signup', [AuthController::class, 'signup']);
