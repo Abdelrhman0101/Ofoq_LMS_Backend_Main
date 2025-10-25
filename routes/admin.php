@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\LessonController; // use base LessonController for lesson endpoints
 use App\Http\Controllers\Admin\CategoryFinalExamController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\CertificateController;
 
 // This file is already loaded with prefix `api/admin` and middleware `api`, `auth:sanctum`, `role:admin` via RouteServiceProvider.
 // Define routes relative to that prefix without re-wrapping groups.
@@ -40,3 +41,5 @@ Route::post('lessons/{lesson}/quiz', [LessonController::class, 'addQuizToLesson'
 // Diploma (Category) Final Exam
 Route::get('categories/{category}/final-exam', [CategoryFinalExamController::class, 'show']);
 Route::post('categories/{category}/final-exam', [CategoryFinalExamController::class, 'store']);
+Route::delete('users/{user}', [UserController::class, 'destroy']);
+Route::get('users/{user}/certificates', [CertificateController::class, 'userCertificatesAdmin']);
