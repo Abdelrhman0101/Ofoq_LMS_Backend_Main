@@ -58,4 +58,20 @@ class CategoryOfCourse extends Model
     {
         return $this->hasMany(Course::class, 'category_id');
     }
+
+    public function enrollments()
+    {
+        return $this->hasMany(\App\Models\UserCategoryEnrollment::class, 'category_id');
+    }
+
+    public function quizzes()
+    {
+        return $this->morphMany(\App\Models\Quiz::class, 'quizzable');
+    }
+
+    public function finalExam()
+    {
+        return $this->morphOne(\App\Models\Quiz::class, 'quizzable')
+            ->where('is_final', true);
+    }
 }

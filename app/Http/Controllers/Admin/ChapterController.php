@@ -25,7 +25,12 @@ class ChapterController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'order' => 'nullable|integer|min:1',
         ]);
+
+        if (!array_key_exists('order', $validated) || empty($validated['order'])) {
+            $validated['order'] = $course->chapters()->count() + 1;
+        }
 
         $chapter = $course->chapters()->create($validated);
 
@@ -42,6 +47,7 @@ class ChapterController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|nullable|string',
+            'order' => 'sometimes|integer|min:1',
         ]);
 
         $chapter->update($validated);

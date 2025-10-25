@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CategoryOfCourse;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\CategoryDetailsResource;
 use Illuminate\Http\Request;
 
 class DiplomaController extends Controller
@@ -37,5 +38,37 @@ class DiplomaController extends Controller
 
         return CategoryResource::collection($diplomas)
             ->additional(['message' => 'Diplomas fetched successfully.']);
+    }
+    /**
+     * عرض تفاصيل الدبلوم (التصنيف) عبر الـ slug أو id مع دوراته.
+     */
+    public function show($slug, Request $request)
+    {
+        $diploma = CategoryOfCourse::query()
+            ->where('is_published', true)
+            ->where(function ($q) use ($slug) {
+                $q->where('slug', $slug);
+                if (is_numeric($slug)) {
+                    $q->orWhere('id', (int) $slug);
+                }
+            })
+            ->with(['courses' => function ($q) {
+                $q->where('is_published', true)
+                  ->withCount(['chapters', 'reviews'])
+                  ->withAvg('reviews', 'rating')
+                  ->with('instructor')
+                  ->with('category');
+            }])
+            ->first();
+
+        if (!$diploma) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Diploma not found.'
+            ], 404);
+        }
+
+        return (new CategoryDetailsResource($diploma))
+            ->additional(['message' => 'Diploma retrieved successfully.']);
     }
 }

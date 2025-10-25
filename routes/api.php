@@ -24,13 +24,19 @@ use App\Http\Controllers\Admin\InstructorController as AdminInstructorController
 use App\Http\Controllers\Admin\FeaturedCourseController as AdminFeaturedCourseController;
 use App\Http\Controllers\LessonNoteController;
 use App\Http\Controllers\Admin\BlockedUserController; // added
+use App\Http\Controllers\UserCategoryEnrollmentController;
+use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
 
 // Public course routes
 Route::get('/allCourses', [CourseController::class, 'search']);
 Route::get('/course/{course}', [CourseController::class, 'show']);
 Route::get('/courses/featured', [CourseController::class, 'featured']);
-// دبلومات (أقسام) عامة
+// دبلومات/فئات عامة (تسمية الاستراتيجية: categories)
 Route::get('/diplomas', [DiplomaController::class, 'index']);
+Route::get('/diplomas/{slug}', [DiplomaController::class, 'show']);
+// Aliases per strategy naming
+Route::get('/categories', [DiplomaController::class, 'index']);
+Route::get('/categories/{slug}', [DiplomaController::class, 'show']);
 
 // Public authentication routes
 Route::post('/signup', [AuthController::class, 'signup']);
@@ -58,6 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/profile/picture', [AuthController::class, 'updateProfilePicture']);
     Route::post('/profile/password', [AuthController::class, 'changePassword']);
+    // Aliases for user profile endpoints
+    Route::get('/user/profile', [AuthController::class, 'profile']);
+    Route::put('/user/profile', [AuthController::class, 'updateProfile']);
     // Favorite Courses
     Route::get('/user/favorite-courses', [UserFavoriteCourseController::class, 'index']);
     Route::post('/user/favorite-courses/{course}', [UserFavoriteCourseController::class, 'store']);
@@ -70,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/courses/{course}', [AdminCourseController::class, 'update']);
         Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy']);
         Route::get('/courses', [AdminCourseController::class, 'index']);
+        Route::get('/courses/{id}', [AdminCourseController::class, 'show']); // added alias for admin course details
         Route::get('/course/{id}', [AdminCourseController::class, 'show']);
         Route::get('/courses-details', [AdminCourseController::class, 'details']);
         Route::get('/courses-not-published', [AdminCourseController::class, 'getOnlyCoursesNotPublished']);
@@ -88,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Route::put('/featured-courses/{featuredCourse}', [AdminFeaturedCourseController::class, 'update']);
         Route::delete('/featured-courses/{featuredCourse}', [AdminFeaturedCourseController::class, 'destroy']);
         Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{id}', [CategoryController::class, 'show']);
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{id}', [CategoryController::class, 'update']);
         Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
@@ -97,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/chapters/{id}', [ChapterController::class, 'destroy']);
 
         // Lessons
+        Route::get('/chapters/{chapter}/lessons', [LessonController::class, 'index']);
         Route::post('/chapters/{chapter_id}/lessons', [LessonController::class, 'store']);
         Route::put('/lessons/{id}', [LessonController::class, 'update']);
         Route::delete('/lessons/{id}', [LessonController::class, 'destroy']);
@@ -107,10 +119,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/quiz/{id}', [QuizController::class, 'update']);
         Route::delete('/quiz/{id}', [QuizController::class, 'destroy']);
 
-        // Questions
+        // Questions (existing singular path)
         Route::post('/quiz/{quiz_id}/questions', [QuestionController::class, 'store']);
         Route::put('/questions/{id}', [QuestionController::class, 'update']);
         Route::delete('/questions/{id}', [QuestionController::class, 'destroy']);
+
+        // Questions (plural alias to match frontend and docs)
+        Route::get('/quizzes/{quiz}/questions', [AdminQuestionController::class, 'index']);
+        Route::post('/quizzes/{quiz}/questions', [AdminQuestionController::class, 'store']);
 
         // Blocked Users
         Route::get('/admin/blocked-users', [BlockedUserController::class, 'index']);
@@ -123,6 +139,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courseEnroll/{course}', [CourseController::class, 'show']);
     Route::post('/courses/{id}/enroll', [UserCourseController::class, 'enroll']);
     Route::get('/my-enrollments', [UserCourseController::class, 'myEnrollments']);
+
+    // Diplomas enrollment
+    Route::post('/categories/{category}/enroll', [UserCategoryEnrollmentController::class, 'enroll']);
+    Route::post('/categories/{category}/enroll/activate', [UserCategoryEnrollmentController::class, 'activate']);
+    Route::get('/my-diplomas', [UserCategoryEnrollmentController::class, 'myDiplomas']);
 
     // Lessons - View and track progress
     Route::get('/lessons/{id}', [UserLessonController::class, 'show']);
@@ -137,6 +158,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Quizzes - Take quizzes and submit answers
     Route::get('/chapters/{chapterId}/quiz', [UserQuizController::class, 'getQuiz']);
+    Route::get('/lessons/{lessonId}/quiz', [UserQuizController::class, 'getLessonQuiz']);
     Route::post('/quiz/{quizId}/submit', [UserQuizController::class, 'submitQuiz']);
     Route::get('/quiz/{quizId}/attempts', [UserQuizController::class, 'getAttempts']);
 

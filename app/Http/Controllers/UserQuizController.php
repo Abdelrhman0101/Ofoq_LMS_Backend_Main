@@ -10,6 +10,9 @@ use App\Http\Resources\QuestionResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Lesson;
+use App\Models\UserCategoryEnrollment;
+use App\Models\UserLessonProgress;
 
 class UserQuizController extends Controller
 {
@@ -33,15 +36,18 @@ class UserQuizController extends Controller
 
         $course = $quiz->chapter->course;
 
-        // Check if user is enrolled in the course
-        $enrollment = UserCourse::where('user_id', $user->id)
-            ->where('course_id', $course->id)
-            ->first();
+        // Allow admin users to access without enrollment check
+        if ($user->role !== 'admin') {
+            // Check if user is enrolled in the course
+            $enrollment = UserCourse::where('user_id', $user->id)
+                ->where('course_id', $course->id)
+                ->first();
 
-        if (!$enrollment) {
-            return response()->json([
-                'message' => 'You are not enrolled in this course'
-            ], 403);
+            if (!$enrollment) {
+                return response()->json([
+                    'message' => 'You are not enrolled in this course'
+                ], 403);
+            }
         }
 
         // Check user's previous attempts
@@ -50,12 +56,13 @@ class UserQuizController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Check if user has exceeded max attempts
-        if ($attempts->count() >= $quiz->max_attempts) {
+        // Check if user has exceeded max attempts (guard if null)
+        $maxAttempts = is_null($quiz->max_attempts) ? null : (int) $quiz->max_attempts;
+        if (!is_null($maxAttempts) && $attempts->count() >= $maxAttempts) {
             $bestAttempt = $attempts->max('score');
             return response()->json([
                 'message' => 'You have reached the maximum number of attempts for this quiz',
-                'max_attempts' => $quiz->max_attempts,
+                'max_attempts' => $maxAttempts,
                 'attempts_used' => $attempts->count(),
                 'best_score' => $bestAttempt
             ], 403);
@@ -69,11 +76,92 @@ class UserQuizController extends Controller
                 'id' => $quiz->id,
                 'title' => $quiz->title,
                 'description' => $quiz->description,
-                'max_attempts' => $quiz->max_attempts,
+                'max_attempts' => $maxAttempts,
                 'passing_score' => $quiz->passing_score,
                 'time_limit' => $quiz->time_limit,
                 'attempts_used' => $attempts->count(),
-                'attempts_remaining' => $quiz->max_attempts - $attempts->count()
+                'attempts_remaining' => is_null($maxAttempts) ? null : max(0, $maxAttempts - $attempts->count()),
+            ],
+            'questions' => QuestionResource::collection($questions)
+        ]);
+    }
+
+    /**
+     * Get lesson quiz for a specific lesson, with access checks
+     */
+    public function getLessonQuiz($lessonId)
+    {
+        $user = Auth::user();
+
+        $lesson = Lesson::with(['chapter.course', 'quiz.questions'])->find($lessonId);
+        if (!$lesson) {
+            return response()->json([
+                'message' => 'Lesson not found'
+            ], 404);
+        }
+
+        $course = $lesson->chapter->course;
+
+        // Allow admin users to access without enrollment check
+        if ($user->role !== 'admin') {
+            // Access: enrolled in course OR active diploma enrollment
+            $hasCourseEnrollment = UserCourse::where('user_id', $user->id)
+                ->where('course_id', $course->id)
+                ->exists();
+
+            $hasActiveDiplomaEnrollment = false;
+            if (!empty($course->category_id)) {
+                $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $user->id)
+                    ->where('category_id', $course->category_id)
+                    ->where('status', 'active')
+                    ->exists();
+            }
+
+            if (!($hasCourseEnrollment || $hasActiveDiplomaEnrollment)) {
+                return response()->json([
+                    'message' => 'You are not enrolled in this course'
+                ], 403);
+            }
+        }
+
+        $quiz = $lesson->quiz;
+        if (!$quiz) {
+            return response()->json([
+                'message' => 'No quiz found for this lesson'
+            ], 404);
+        }
+
+        // Load related questions
+        $quiz->load(['questions']);
+
+        $attempts = UserQuizAttempt::where('user_id', $user->id)
+            ->where('quiz_id', $quiz->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $maxAttempts = is_null($quiz->max_attempts) ? null : (int) $quiz->max_attempts;
+        if (!is_null($maxAttempts) && $attempts->count() >= $maxAttempts) {
+            $bestAttempt = $attempts->max('score');
+            return response()->json([
+                'message' => 'You have reached the maximum number of attempts for this quiz',
+                'max_attempts' => $maxAttempts,
+                'attempts_used' => $attempts->count(),
+                'best_score' => $bestAttempt
+            ], 403);
+        }
+
+        $questions = $this->getSmartRandomQuestions($quiz, $user->id);
+
+        return response()->json([
+            'quiz' => [
+                'id' => $quiz->id,
+                'title' => $quiz->title,
+                'description' => $quiz->description,
+                'max_attempts' => $maxAttempts,
+                'passing_score' => $quiz->passing_score,
+                'time_limit' => $quiz->time_limit,
+                'attempts_used' => $attempts->count(),
+                'attempts_remaining' => is_null($maxAttempts) ? null : max(0, $maxAttempts - $attempts->count()),
             ],
             'questions' => QuestionResource::collection($questions)
         ]);
@@ -93,7 +181,7 @@ class UserQuizController extends Controller
         ]);
 
         $user = Auth::user();
-        $quiz = Quiz::with(['chapter.course', 'questions'])->find($quizId);
+        $quiz = Quiz::with(['chapter.course', 'questions', 'quizzable'])->find($quizId);
 
         if (!$quiz) {
             return response()->json([
@@ -101,25 +189,48 @@ class UserQuizController extends Controller
             ], 404);
         }
 
-        $course = $quiz->chapter->course;
-
-        // Check enrollment
-        $enrollment = UserCourse::where('user_id', $user->id)
-            ->where('course_id', $course->id)
-            ->first();
-
-        if (!$enrollment) {
-            return response()->json([
-                'message' => 'You are not enrolled in this course'
-            ], 403);
+        $course = $quiz->chapter ? $quiz->chapter->course : null;
+        if (!$course) {
+            // Fallback: if chapter missing, try resolve via Lesson quizzable
+            if ($quiz->quizzable_type === Lesson::class && $quiz->quizzable && $quiz->quizzable->chapter) {
+                $course = $quiz->quizzable->chapter->course;
+            }
         }
 
-        // Check attempts limit
+        if (!$course) {
+            return response()->json([
+                'message' => 'Associated course not found for this quiz'
+            ], 422);
+        }
+
+        // Allow admin users to access without enrollment check
+        if ($user->role !== 'admin') {
+            // Access: enrolled in course OR active diploma enrollment
+            $hasCourseEnrollment = UserCourse::where('user_id', $user->id)
+                ->where('course_id', $course->id)
+                ->exists();
+
+            $hasActiveDiplomaEnrollment = false;
+            if (!empty($course->category_id)) {
+                $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $user->id)
+                    ->where('category_id', $course->category_id)
+                    ->where('status', 'active')
+                    ->exists();
+            }
+
+            if (!($hasCourseEnrollment || $hasActiveDiplomaEnrollment)) {
+                return response()->json([
+                    'message' => 'You are not enrolled in this course'
+                ], 403);
+            }
+        }
+
+        // Check attempts limit (guard if null = unlimited)
         $attemptsCount = UserQuizAttempt::where('user_id', $user->id)
             ->where('quiz_id', $quiz->id)
             ->count();
-
-        if ($attemptsCount >= $quiz->max_attempts) {
+        $maxAttempts = is_null($quiz->max_attempts) ? null : (int) $quiz->max_attempts;
+        if (!is_null($maxAttempts) && $attemptsCount >= $maxAttempts) {
             return response()->json([
                 'message' => 'Maximum attempts exceeded'
             ], 403);
@@ -142,6 +253,20 @@ class UserQuizController extends Controller
 
         // Update course progress if quiz is passed
         if ($attempt->passed) {
+            // If this is a lesson quiz, mark quiz_passed for that lesson
+            if ($quiz->quizzable_type === Lesson::class && $quiz->quizzable) {
+                $lessonId = $quiz->quizzable->id;
+                UserLessonProgress::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'lesson_id' => $lessonId,
+                    ],
+                    [
+                        'quiz_passed' => true,
+                    ]
+                );
+            }
+
             $this->updateCourseProgressAfterQuiz($user->id, $course->id);
         }
 
@@ -165,7 +290,7 @@ class UserQuizController extends Controller
      */
     private function getSmartRandomQuestions($quiz, $userId)
     {
-        $questionsPerQuiz = $quiz->questions_per_quiz ?? $quiz->questions->count();
+        $questionsPerQuiz = ($quiz->questions_per_quiz > 0) ? $quiz->questions_per_quiz : $quiz->questions->count();
 
         // Get previously used questions in recent attempts
         $recentAttempts = UserQuizAttempt::where('user_id', $userId)

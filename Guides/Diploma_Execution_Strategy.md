@@ -75,3 +75,45 @@
 ## خطة الإطلاق والتراجع
 - نشر مرحلي لكل مرحلة مع فحوصات قبول.
 - تراجع: إمكانية تعطيل نقاط الدبلومات دون التأثير على الكورسات القائمة.
+
+# استراتية تنفيذ نظام الدبلومات
+
+## تحديثات المرحلة 2 (التسجيل على مستوى الدبلومة)
+- حالات التسجيل المعتمدة: `active` (مجاني/مفعّل) و`pending_payment` (مدفوع ينتظر التفعيل).
+- نقطة التفعيل بعد الدفع: `POST /api/categories/{category}/enroll/activate` (محمي بـ `auth:sanctum`).
+- رد `GET /api/my-diplomas` الآن يُضمّن الحقول: `id, status, enrolled_at, category` حيث `category` تُستخدم عبر `CategoryResource` مع `courses_count`.
+
+### تدفق التسجيل (Enroll)
+1. التحقق من أن الدبلوم (القسم) منشور `is_published=true` ويقبل الوصول.
+2. تحديد إن كان الدبلوم مدفوعًا (`!is_free && price>0`) أم مجانيًا.
+3. إنشاء `UserCategoryEnrollment` بالحالة:
+   - مجاني: `active` ثم ربط كل الكورسات تحت الدبلومة للمستخدم (إنشاء `UserCourse`).
+   - مدفوع: `pending_payment` بدون ربط كورسات حتى التفعيل.
+4. إرجاع عدد الكورسات التي تم ربطها عند التسجيل المجاني.
+
+### تدفق التفعيل (Activate)
+1. التحقق من وجود دبلوم منشور ومعرّف بـ `slug` أو `id`.
+2. جلب تسجيل المستخدم `UserCategoryEnrollment` لنفس الدبلوم.
+3. رفض التفعيل إذا الحالة `active` أو ليست `pending_payment`.
+4. تحديث الحالة إلى `active` ثم ربط كل كورسات الدبلوم للمستخدم عبر `UserCourse::firstOrCreate`؛ مع زيادة `students_count` لكل كورس جديد يُربط.
+5. ردّ يحتوي `enrollment` و`enrolled_courses_count`.
+
+### الجوب + المراقب (Auto-attach for new courses)
+- `AttachCourseToActiveDiplomaEnrollmentsJob`: يقوم بإلحاق أي كورس منشور جديد إلى كل المسجّلين في الدبلومة بالحالة `active` فقط، بشكل آمن (idempotent) عبر `firstOrCreate`.
+- `CourseObserver`:
+  - عند الإنشاء: إذا كان `is_published=true` وله `category_id`، يتم جدولة الـ Job.
+  - عند التحديث: إذا تغيّر `is_published` إلى true أو تغيّر `category_id`، تُجدول الـ Job.
+- التسجيل في `AppServiceProvider::boot`: `Course::observe(CourseObserver::class);`
+
+### تسجيل المسارات (Routes)
+- تحت مجموعة `auth:sanctum`:
+  - `POST /api/categories/{category}/enroll`
+  - `POST /api/categories/{category}/enroll/activate`
+  - `GET /api/my-diplomas`
+
+### توافق أمامي (Frontend Contract)
+- عند عرض دبلومات المستخدم، يعتمد الـ Frontend على:
+  - `status`: يحدد ما إذا كان الوصول للكورسات مفعّلًا.
+  - `enrolled_at`: تاريخ التسجيل.
+  - `category`: تفاصيل الدبلوم عبر `CategoryResource` (يشمل `courses_count`).
+- عند إتمام الدفع، يستدعي الـ Frontend `POST /api/categories/{category}/enroll/activate` لتفعيل الوصول وربط الكورسات.

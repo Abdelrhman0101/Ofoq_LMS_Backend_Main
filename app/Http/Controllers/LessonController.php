@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\DB;
 
 class LessonController extends Controller
 {
+    public function index(Chapter $chapter)
+    {
+        $lessons = $chapter->lessons()->with(['quiz.questions'])->orderBy('order')->get();
+        return LessonResource::collection($lessons);
+    }
+
     /**
      * Store a newly created lesson
      */

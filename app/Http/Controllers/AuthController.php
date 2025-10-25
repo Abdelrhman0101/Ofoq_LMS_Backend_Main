@@ -123,6 +123,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'profile_picture' => $user->profile_picture,
+                'qualification' => $user->qualification,
+                'media_work_sector' => $user->media_work_sector,
+                'date_of_birth' => $user->date_of_birth,
+                'previous_field' => $user->previous_field,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ]
@@ -139,6 +143,10 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
             'profile_picture' => 'sometimes|string|max:255',
+            'qualification' => 'sometimes|string|max:255',
+            'media_work_sector' => 'sometimes|string|max:255',
+            'date_of_birth' => 'sometimes|date',
+            'previous_field' => 'sometimes|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -147,7 +155,14 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user->update($request->only(['name', 'profile_picture']));
+        $user->update($request->only([
+            'name',
+            'profile_picture',
+            'qualification',
+            'media_work_sector',
+            'date_of_birth',
+            'previous_field',
+        ]));
 
         return response()->json([
             'user' => [
@@ -156,6 +171,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'profile_picture' => $user->profile_picture,
+                'qualification' => $user->qualification,
+                'media_work_sector' => $user->media_work_sector,
+                'date_of_birth' => $user->date_of_birth,
+                'previous_field' => $user->previous_field,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ]

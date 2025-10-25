@@ -1,28 +1,42 @@
 <?php
 
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\ChapterController;
-use App\Http\Controllers\Admin\CourseController;
-use App\Http\Controllers\Admin\LessonController;
-use App\Http\Controllers\Admin\QuestionController;
-use App\Http\Controllers\Admin\QuizController;
 use Illuminate\Support\Facades\Route;
 
-Route::apiResource('categories', CategoryController::class);
+use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\InstructorController;
+use App\Http\Controllers\Admin\FeaturedCourseController;
+use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\QuizController;
+use App\Http\Controllers\Admin\ChapterController;
+use App\Http\Controllers\LessonController; // use base LessonController for lesson endpoints
+use App\Http\Controllers\Admin\CategoryFinalExamController;
+use App\Http\Controllers\Admin\UserController;
 
-Route::get('courses/details', [CourseController::class, 'details']);
-Route::apiResource('courses', CourseController::class);
+// This file is already loaded with prefix `api/admin` and middleware `api`, `auth:sanctum`, `role:admin` via RouteServiceProvider.
+// Define routes relative to that prefix without re-wrapping groups.
 
+// Students management
+Route::get('students', [UserController::class, 'getStudentsWithDiplomas']);
+
+// Chapters
+Route::get('courses/{course}/chapters', [ChapterController::class, 'index']);
 Route::post('courses/{course}/chapters', [ChapterController::class, 'store']);
-Route::put('chapters/{chapter}', [ChapterController::class, 'update']);
-Route::delete('chapters/{chapter}', [ChapterController::class, 'destroy']);
+Route::get('courses/{course}/chapters/{chapter}', [ChapterController::class, 'show']);
+Route::put('courses/{course}/chapters/{chapter}', [ChapterController::class, 'update']);
+Route::delete('courses/{course}/chapters/{chapter}', [ChapterController::class, 'destroy']);
 
+// Lessons for a chapter (GET index)
+Route::get('chapters/{chapter}/lessons', [LessonController::class, 'index']);
+
+// Lessons CRUD
 Route::post('chapters/{chapter}/lessons', [LessonController::class, 'store']);
 Route::put('lessons/{lesson}', [LessonController::class, 'update']);
 Route::delete('lessons/{lesson}', [LessonController::class, 'destroy']);
 
-Route::post('chapters/{chapter}/quiz', [QuizController::class, 'store']);
+// Quiz management for lessons
+Route::post('lessons/{lesson}/quiz', [LessonController::class, 'addQuizToLesson']);
 
-Route::post('quiz/{quiz}/questions', [QuestionController::class, 'store']);
-Route::put('questions/{question}', [QuestionController::class, 'update']);
-Route::delete('questions/{question}', [QuestionController::class, 'destroy']);
+// Diploma (Category) Final Exam
+Route::get('categories/{category}/final-exam', [CategoryFinalExamController::class, 'show']);
+Route::post('categories/{category}/final-exam', [CategoryFinalExamController::class, 'store']);

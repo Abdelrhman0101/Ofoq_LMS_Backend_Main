@@ -42,7 +42,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
 
             // مسارات الإدارة (اختياري)
-            Route::middleware('api')
+            Route::middleware(['api', 'auth:sanctum', 'role:admin'])
                 ->prefix('api/admin')
                 ->group(base_path('routes/admin.php'));
         });

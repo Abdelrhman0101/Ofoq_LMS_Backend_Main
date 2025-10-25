@@ -29,6 +29,10 @@ class User extends Authenticatable
         'profile_picture',
         'phone',
         'nationality',
+        'qualification',
+        'media_work_sector',
+        'date_of_birth',
+        'previous_field',
     ];
 
     /**
@@ -87,5 +91,10 @@ class User extends Authenticatable
     public function favoriteCourses(): BelongsToMany
     {
         return $this->belongsToMany(Course::class, 'user_favorite_courses');
+    }
+
+    public function categoryEnrollments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\UserCategoryEnrollment::class);
     }
 }

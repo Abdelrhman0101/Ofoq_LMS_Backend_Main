@@ -381,12 +381,44 @@ These endpoints handle user authentication and profile management.
 
 ### Profile Management
 
-#### `GET /api/profile`
-- **Description**: Get current user profile.
-- **Authorization**: Authenticated user (auth:sanctum).
-- **Success Response**:
+## User Profile
+
+### `GET /api/user/profile`
+- Description: Retrieve current authenticated user's profile, including enrollment fields.
+- Authorization: Authenticated (Sanctum).
+- Success Response:
   ```json
   {
+    "user": {
+      "id": 1,
+      "name": "Ahmed Ali",
+      "email": "ahmed@example.com",
+      "role": "student",
+      "profile_picture": "profile_pictures/abc.jpg",
+      "qualification": "ماجستير",
+      "media_work_sector": "جهة حكومية",
+      "date_of_birth": "1995-05-10",
+      "previous_field": "ادارة مؤسسة",
+      "created_at": "2025-10-24T11:00:00.000000Z",
+      "updated_at": "2025-10-24T11:00:00.000000Z"
+    }
+  }
+  ```
+
+### `PUT /api/user/profile`
+- Description: Update the authenticated user's profile fields.
+- Authorization: Authenticated (Sanctum).
+- Request Body (all fields optional):
+  - `name`: string, max 255
+  - `profile_picture`: string, max 255
+  - `qualification`: string, max 255
+  - `media_work_sector`: string, max 255
+  - `date_of_birth`: date (YYYY-MM-DD)
+  - `previous_field`: string, max 255
+- Success Response: Same shape as GET `/api/user/profile`.
+
+```json
+{
     "user": {
       "id": 5,
       "name": "Ahmed Ali",

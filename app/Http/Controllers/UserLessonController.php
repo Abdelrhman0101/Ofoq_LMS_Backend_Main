@@ -8,6 +8,8 @@ use App\Models\UserLessonProgress;
 use App\Http\Resources\LessonResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\UserCategoryEnrollment;
+use App\Models\Course;
 
 class UserLessonController extends Controller
 {
@@ -27,12 +29,20 @@ class UserLessonController extends Controller
         $user = Auth::user();
         $course = $lesson->chapter->course;
         
-        // Check if user is enrolled in the course
-        $enrollment = UserCourse::where('user_id', $user->id)
-                               ->where('course_id', $course->id)
-                               ->first();
+        // تحديث التحقق: السماح إذا كان مسجلاً مباشرة أو مسجلاً بشكل نشط في الدبلومة الأم
+        $hasCourseEnrollment = UserCourse::where('user_id', $user->id)
+                                        ->where('course_id', $course->id)
+                                        ->exists();
+
+        $hasActiveDiplomaEnrollment = false;
+        if (!empty($course->category_id)) {
+            $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $user->id)
+                ->where('category_id', $course->category_id)
+                ->where('status', 'active')
+                ->exists();
+        }
         
-        if (!$enrollment) {
+        if (!($hasCourseEnrollment || $hasActiveDiplomaEnrollment)) {
             return response()->json([
                 'message' => 'You are not enrolled in this course'
             ], 403);
@@ -62,12 +72,8 @@ class UserLessonController extends Controller
         $this->updateCourseProgress($user->id, $course->id);
 
         return response()->json([
+            'message' => 'Lesson fetched successfully',
             'lesson' => new LessonResource($lesson),
-            'progress' => [
-                'status' => $lessonProgress->status,
-                'started_at' => $lessonProgress->started_at,
-                'completed_at' => $lessonProgress->completed_at
-            ]
         ]);
     }
 
@@ -87,12 +93,20 @@ class UserLessonController extends Controller
         $user = Auth::user();
         $course = $lesson->chapter->course;
         
-        // Check if user is enrolled
-        $enrollment = UserCourse::where('user_id', $user->id)
-                               ->where('course_id', $course->id)
-                               ->first();
-        
-        if (!$enrollment) {
+        // تحقق الوصول: تسجيل مباشر أو تسجيل دبلومة نشط
+        $hasCourseEnrollment = UserCourse::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists();
+
+        $hasActiveDiplomaEnrollment = false;
+        if (!empty($course->category_id)) {
+            $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $user->id)
+                ->where('category_id', $course->category_id)
+                ->where('status', 'active')
+                ->exists();
+        }
+
+        if (!($hasCourseEnrollment || $hasActiveDiplomaEnrollment)) {
             return response()->json([
                 'message' => 'You are not enrolled in this course'
             ], 403);
@@ -147,8 +161,27 @@ class UserLessonController extends Controller
 
         // Update user course progress
         $userCourse = UserCourse::where('user_id', $userId)
-                               ->where('course_id', $courseId)
-                               ->first();
+            ->where('course_id', $courseId)
+            ->first();
+
+        // إذا لا يوجد سجل للمقرر لكن الوصول عبر الدبلومة نشط، أنشئ سجلًا لبدء التقدم
+        if (!$userCourse) {
+            $course = Course::find($courseId);
+            if ($course && !empty($course->category_id)) {
+                $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $userId)
+                    ->where('category_id', $course->category_id)
+                    ->where('status', 'active')
+                    ->exists();
+                if ($hasActiveDiplomaEnrollment) {
+                    $userCourse = UserCourse::create([
+                        'user_id' => $userId,
+                        'course_id' => $courseId,
+                        'status' => 'in_progress',
+                        'progress_percentage' => 0,
+                    ]);
+                }
+            }
+        }
 
         if ($userCourse) {
             $status = 'in_progress';
@@ -174,17 +207,32 @@ class UserLessonController extends Controller
     public function getCourseProgress($courseId)
     {
         $user = Auth::user();
+        $course = Course::find($courseId);
         
-        // Check if user is enrolled
-        $enrollment = UserCourse::where('user_id', $user->id)
-                               ->where('course_id', $courseId)
-                               ->first();
-        
-        if (!$enrollment) {
+        // تحقق الوصول: تسجيل مباشر أو تسجيل دبلومة نشط
+        $hasCourseEnrollment = UserCourse::where('user_id', $user->id)
+            ->where('course_id', $courseId)
+            ->exists();
+
+        $hasActiveDiplomaEnrollment = false;
+        if ($course && !empty($course->category_id)) {
+            $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $user->id)
+                ->where('category_id', $course->category_id)
+                ->where('status', 'active')
+                ->exists();
+        }
+
+        if (!($hasCourseEnrollment || $hasActiveDiplomaEnrollment)) {
             return response()->json([
                 'message' => 'You are not enrolled in this course'
             ], 403);
         }
+
+        // تأكد من وجود سجل المقرر وتحديث التقدم
+        $this->updateCourseProgress($user->id, $courseId);
+        $enrollment = UserCourse::where('user_id', $user->id)
+            ->where('course_id', $courseId)
+            ->first();
 
         // Get lesson progress
         $lessonProgress = UserLessonProgress::where('user_id', $user->id)
@@ -204,6 +252,7 @@ class UserLessonController extends Controller
                         'lesson_id' => $progress->lesson_id,
                         'lesson_title' => $progress->lesson->title,
                         'status' => $progress->status,
+                        'quiz_passed' => (bool) ($progress->quiz_passed ?? false),
                         'started_at' => $progress->started_at,
                         'completed_at' => $progress->completed_at
                     ];

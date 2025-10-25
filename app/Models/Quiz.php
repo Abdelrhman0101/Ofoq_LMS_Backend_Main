@@ -30,6 +30,7 @@ class Quiz extends Model
         'quizzable_type',
         'quizzable_id',
         'is_final',
+        'chapter_id',
         // 'passing_score',
         // 'time_limit',
     ];
@@ -37,4 +38,9 @@ class Quiz extends Model
     protected $casts = [
         'is_final' => 'boolean',
     ];
+
+    public function chapter(): BelongsTo
+    {
+        return $this->belongsTo(Chapter::class);
+    }
 }

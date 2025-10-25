@@ -29,7 +29,7 @@ class CourseRequest extends FormRequest
             'rating'             => 'nullable|numeric|min:0|max:5',
             'discount_price'     => 'nullable|numeric|min:0',
             'discount_ends_at'   => 'nullable|date|after:now',
-            'price'              => 'required|numeric|min:0',
+            'price'              => 'nullable|numeric|min:0',
             'is_free'            => 'boolean',
             'is_published'       => 'boolean',
             'instructor_id'      => 'required|exists:instructors,id',
@@ -42,7 +42,7 @@ class CourseRequest extends FormRequest
             'students_count'     => 'nullable|integer|min:0',
             'hours_count'        => 'nullable|integer|min:0',
             'reviews_count'      => 'nullable|integer|min:0',
-            'cover_image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'cover_image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:20048',
             'status'             => 'nullable|string|in:draft,published',
         ];
 

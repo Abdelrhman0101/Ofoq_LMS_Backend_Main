@@ -14,11 +14,13 @@ class UserLessonProgress extends Model
         'user_id',
         'lesson_id',
         'status',
+        'quiz_passed',
         'started_at',
         'completed_at'
     ];
 
     protected $casts = [
+        'quiz_passed' => 'boolean',
         'started_at' => 'datetime',
         'completed_at' => 'datetime'
     ];

@@ -16,10 +16,10 @@ class AdminUserSeeder extends Seeder
     {
         // Create default admin user
         User::firstOrCreate(
-            ['email' => 'admin@ofoq.com'],
+            ['email' => 'admin@ofuq.academy'],
             [
                 'name' => 'Admin',
-                'email' => 'admin@ofuq.com',
+                'email' => 'admin@ofuq.academy',
                 'password' => Hash::make('admin123'),
                 'role' => 'admin',
                 'email_verified_at' => now(),
@@ -28,10 +28,10 @@ class AdminUserSeeder extends Seeder
 
         // Create a test student user
         User::firstOrCreate(
-            ['email' => 'student@ofoq.com'],
+            ['email' => 'student@ofuq.academy'],
             [
                 'name' => 'Test Student',
-                'email' => 'student@ofoq.com',
+                'email' => 'student@ofuq.academy',
                 'password' => Hash::make('student123'),
                 'role' => 'student',
                 'email_verified_at' => now(),
