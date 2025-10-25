@@ -27,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->group('api', [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            // Removed EnsureFrontendRequestsAreStateful to enforce token-only API auth
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
