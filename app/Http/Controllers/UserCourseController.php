@@ -190,7 +190,7 @@ class UserCourseController extends Controller
                         $finalExamScore = null;
                         
                         if ($course->finalExam) {
-                            $quizAttempt = \App\Models\QuizAttempt::where('user_id', $enrollment->user_id)
+                            $quizAttempt = UserQuizAttempt::where('user_id', $enrollment->user_id)
                                 ->where('quiz_id', $course->finalExam->id)
                                 ->orderBy('created_at', 'desc')
                                 ->first();

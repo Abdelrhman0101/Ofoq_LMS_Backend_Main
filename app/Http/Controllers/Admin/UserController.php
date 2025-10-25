@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserCategoryEnrollment;
 use Illuminate\Http\Request;
+use App\Models\UserQuizAttempt;
 
 class UserController extends Controller
 {
@@ -42,7 +43,7 @@ class UserController extends Controller
                     $finalExamScore = null;
                     
                     if ($course->finalExam) {
-                        $quizAttempt = \App\Models\QuizAttempt::where('user_id', $enrollment->user_id)
+                        $quizAttempt = UserQuizAttempt::where('user_id', $enrollment->user_id)
                             ->where('quiz_id', $course->finalExam->id)
                             ->orderBy('created_at', 'desc')
                             ->first();
