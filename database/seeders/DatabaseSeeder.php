@@ -14,16 +14,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            CategoriesSeeder::class,
-            InstructorsSeeder::class,
-            CoursesSeeder::class,
-            UpdateCoursePublishStatusSeeder::class,
+            
+            
             AdminUserSeeder::class,
-            UserSeeder::class,
-            ReviewsSeeder::class,
-            FeaturedCourseSeeder::class,
-            UserCoursesSeeder::class,
-            AddFinalExamsToExistingCoursesSeeder::class
         ]);
     }
 }
