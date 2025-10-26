@@ -26,6 +26,10 @@ use App\Http\Controllers\LessonNoteController;
 use App\Http\Controllers\Admin\BlockedUserController; // added
 use App\Http\Controllers\UserCategoryEnrollmentController;
 use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
+use App\Http\Controllers\StatsController;
+
+// Public stats routes
+Route::get('/stats/general', [StatsController::class, 'getGeneralStats']);
 
 // Public course routes
 Route::get('/allCourses', [CourseController::class, 'search']);
@@ -133,6 +137,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/blocked-users', [BlockedUserController::class, 'store']);
         // Route::put('/admin/blocked-users/{blockedUser}', [BlockedUserController::class, 'update']);
         Route::delete('/admin/blocked-users/{blockedUser}', [BlockedUserController::class, 'destroy']);
+
+        // Admin Stats
+        Route::get('/stats/students', [StatsController::class, 'getStudentStats']);
     });
 
     // User/Student routes (accessible to authenticated users)
