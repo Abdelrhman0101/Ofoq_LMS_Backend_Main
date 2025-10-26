@@ -94,7 +94,7 @@ class UserController extends Controller
                     'previous_field' => $student->previous_field,
                     'created_at' => $student->created_at,
                     'email_verified_at' => $student->email_verified_at,
-                    'is_blocked' => $student->is_blocked,
+                    'is_blocked' => \App\Models\BlockedUser::where('user_id', $student->id)->where('is_blocked', true)->exists(),
                     'courses' => $courses,
                     'diplomas' => $diplomas,
                     'total_courses' => $courses->count(),
@@ -104,6 +104,17 @@ class UserController extends Controller
                 ];
             });
 
+            // Global stats across all non-admin users
+            $totalStudents = User::where('role', '!=', 'admin')->count();
+            // Blocked users are tracked in blocked_users table
+            $blockedStudents = \App\Models\BlockedUser::where('is_blocked', true)
+                ->whereHas('user', function ($q) {
+                    $q->where('role', '!=', 'admin');
+                })
+                ->distinct('user_id')
+                ->count('user_id');
+            $activeStudents = $totalStudents - $blockedStudents;
+
             return response()->json([
                 'success' => true,
                 'data' => $studentsData,
@@ -112,7 +123,12 @@ class UserController extends Controller
                     'last_page' => $students->lastPage(),
                     'per_page' => $students->perPage(),
                     'total' => $students->total(),
-                ]
+                ],
+                'stats' => [
+                    'total_students' => $totalStudents,
+                    'active_students' => $activeStudents,
+                    'blocked_students' => $blockedStudents,
+                ],
             ]);
         } catch (\Exception $e) {
             \Log::error('Error in getStudentsWithDiplomas: ' . $e->getMessage());
