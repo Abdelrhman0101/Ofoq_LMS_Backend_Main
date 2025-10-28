@@ -142,4 +142,47 @@ class StatsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * توزيع الطلاب حسب الجنسية (للاستخدام العام في الهوم)
+     */
+    public function getStudentsByCountry(Request $request): JsonResponse
+    {
+        try {
+            // نجمع الطلاب (غير الإداريين) وغير المحظورين، مع جنسية معبأة
+            $distribution = User::query()
+                ->select(['nationality', \DB::raw('COUNT(*) as students_count')])
+                ->where('role', '!=', 'admin')
+                ->whereNotNull('nationality')
+                ->where('nationality', '!=', '')
+                ->whereNotExists(function ($query) {
+                    $query->select(\DB::raw(1))
+                        ->from('blocked_users')
+                        ->whereRaw('blocked_users.user_id = users.id')
+                        ->where('blocked_users.is_blocked', true);
+                })
+                ->groupBy('nationality')
+                ->orderByDesc('students_count')
+                ->get();
+
+            // نعيد الاسم بالعربية وعدد الطلاب لكل جنسية
+            $data = $distribution->map(function ($row) {
+                return [
+                    'country_ar' => $row->nationality,
+                    'students_count' => (int) $row->students_count,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error in getStudentsByCountry: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في جلب توزيع الطلاب حسب الجنسية',
+            ], 500);
+        }
+    }
 }

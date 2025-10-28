@@ -30,6 +30,7 @@ use App\Http\Controllers\StatsController;
 
 // Public stats routes
 Route::get('/stats/general', [StatsController::class, 'getGeneralStats']);
+Route::get('/stats/students-by-country', [StatsController::class, 'getStudentsByCountry']);
 
 // Public course routes
 Route::get('/allCourses', [CourseController::class, 'search']);
