@@ -15,6 +15,7 @@ class UserCourse extends Model
         'course_id',
         'status',
         'progress_percentage',
+        'final_exam_score',
         'completed_at',
     ];
     public function user(): BelongsTo

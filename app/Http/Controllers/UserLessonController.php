@@ -260,4 +260,81 @@ class UserLessonController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Get navigation info for a lesson: previous/next and whether next is the last lesson
+     */
+    public function navigation($id)
+    {
+        $lesson = Lesson::with(['chapter.course'])->find($id);
+
+        if (!$lesson) {
+            return response()->json([
+                'message' => 'Lesson not found'
+            ], 404);
+        }
+
+        $user = Auth::user();
+        $course = $lesson->chapter->course;
+
+        // تحقق الوصول: تسجيل مباشر أو تسجيل دبلومة نشط
+        $hasCourseEnrollment = UserCourse::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists();
+
+        $hasActiveDiplomaEnrollment = false;
+        if (!empty($course->category_id)) {
+            $hasActiveDiplomaEnrollment = UserCategoryEnrollment::where('user_id', $user->id)
+                ->where('category_id', $course->category_id)
+                ->where('status', 'active')
+                ->exists();
+        }
+
+        if (!($hasCourseEnrollment || $hasActiveDiplomaEnrollment)) {
+            return response()->json([
+                'message' => 'You are not enrolled in this course'
+            ], 403);
+        }
+
+        // بناء قائمة الدروس مرتبة حسب ترتيب الفصول ثم الدروس (يُستبعد غير المرئي)
+        $orderedLessons = Lesson::query()
+            ->join('chapters', 'lessons.chapter_id', '=', 'chapters.id')
+            ->where('chapters.course_id', $course->id)
+            ->where('lessons.is_visible', true)
+            ->orderBy('chapters.order')
+            ->orderBy('lessons.order')
+            ->select(['lessons.id'])
+            ->get();
+
+        $ids = $orderedLessons->pluck('id');
+        $count = $ids->count();
+        $currentIndex = $ids->search($lesson->id);
+
+        if ($currentIndex === false) {
+            // إذا كان الدرس غير مرئي حاليًا أو غير موجود ضمن القائمة المرئية
+            return response()->json([
+                'message' => 'Lesson is not available for navigation',
+            ], 400);
+        }
+
+        $prevLessonId = $currentIndex > 0 ? $ids[$currentIndex - 1] : null;
+        $nextLessonId = $currentIndex < ($count - 1) ? $ids[$currentIndex + 1] : null;
+        $lastLessonId = $count > 0 ? $ids[$count - 1] : null;
+
+        $isLastLesson = $lesson->id === $lastLessonId;
+        $isNextLast = $nextLessonId !== null && $nextLessonId === $lastLessonId;
+
+        return response()->json([
+            'message' => 'Navigation fetched successfully',
+            'data' => [
+                'current_lesson_id' => $lesson->id,
+                'prev_lesson_id' => $prevLessonId,
+                'next_lesson_id' => $nextLessonId,
+                'last_lesson_id' => $lastLessonId,
+                'is_last_lesson' => $isLastLesson,
+                'is_next_last' => $isNextLast,
+                'finish_course_available' => $isNextLast,
+            ]
+        ]);
+    }
 }

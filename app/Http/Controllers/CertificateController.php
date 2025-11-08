@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\UserCourse;
 use App\Models\Certificate;
+use App\Models\DiplomaCertificate;
+use App\Models\CategoryOfCourse;
+use App\Models\UserCategoryEnrollment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +17,164 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class CertificateController extends Controller
 {
+    /**
+     * Normalize a stored file_path to a public, direct URL or return null.
+     * - External URLs (http/https) are returned as-is.
+     * - Local storage paths are converted via Storage::url if the file exists.
+     * - Missing or non-existing paths return null.
+     */
+    private function filePathToUrl(?string $filePath): ?string
+    {
+        if (empty($filePath)) {
+            return null;
+        }
+
+        // External URL
+        if (preg_match('/^https?:\/\//i', $filePath)) {
+            return $filePath;
+        }
+
+        // Stored locally on public disk
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+            return \Illuminate\Support\Facades\Storage::url($filePath);
+        }
+
+        return null;
+    }
+
+    /**
+     * Return certificate data for a completed course (no PDF generation)
+     */
+    public function getCourseCertificateData($courseId)
+    {
+        $user = Auth::user();
+
+        $userCourse = UserCourse::where('user_id', $user->id)
+            ->where('course_id', $courseId)
+            ->with('course')
+            ->first();
+
+        if (!$userCourse) {
+            return response()->json(['message' => 'غير مسجل في هذا المقرر'], 404);
+        }
+
+        if ($userCourse->status !== 'completed') {
+            return response()->json(['message' => 'المقرر غير مكتمل بعد'], 403);
+        }
+
+        $certificate = Certificate::where('user_id', $user->id)
+            ->where('course_id', $courseId)
+            ->first();
+
+        if (!$certificate) {
+            // Create record only, no PDF
+            $verificationToken = Str::uuid();
+            $certificate = Certificate::create([
+                'user_id' => $user->id,
+                'course_id' => $userCourse->course_id,
+                'user_course_id' => $userCourse->id,
+                'verification_token' => $verificationToken,
+                'issued_at' => now(),
+                'certificate_data' => json_encode([
+                    'user_name' => $user->name,
+                    'user_email' => $user->email,
+                    'course_title' => $userCourse->course->title,
+                    'completion_date' => $userCourse->completed_at,
+                    'enrollment_date' => $userCourse->created_at,
+                    'progress_percentage' => $userCourse->progress_percentage,
+                ]),
+            ]);
+        }
+
+        $data = is_array($certificate->certificate_data)
+            ? $certificate->certificate_data
+            : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+        return response()->json([
+            'certificate' => [
+                'id' => $certificate->id,
+                'verification_token' => $certificate->verification_token,
+                'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
+                'issued_at' => optional($certificate->issued_at)->toIso8601String(),
+                'completion_date' => optional($userCourse->completed_at)->toIso8601String(),
+                'file_path' => $this->filePathToUrl($certificate->file_path),
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'course' => [
+                    'id' => $userCourse->course->id,
+                    'title' => $userCourse->course->title,
+                ],
+                'data' => $data,
+            ],
+        ]);
+    }
+
+    /**
+     * Return diploma certificate data for a completed diploma (no PDF generation)
+     */
+    public function getDiplomaCertificateData(CategoryOfCourse $category)
+    {
+        $user = Auth::user();
+
+        $enrollment = UserCategoryEnrollment::where('user_id', $user->id)
+            ->where('category_id', $category->id)
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'غير مسجل في هذه الدبلومة'], 404);
+        }
+
+        if ($enrollment->status !== 'completed') {
+            return response()->json(['message' => 'الدبلومة غير مكتملة بعد'], 403);
+        }
+
+        $certificate = DiplomaCertificate::where('user_id', $user->id)
+            ->where('category_id', $category->id)
+            ->first();
+
+        if (!$certificate) {
+            $verificationToken = Str::uuid();
+            $certificate = DiplomaCertificate::create([
+                'user_id' => $user->id,
+                'category_id' => $category->id,
+                'user_category_enrollment_id' => $enrollment->id,
+                'verification_token' => $verificationToken,
+                'issued_at' => now(),
+                'certificate_data' => json_encode([
+                    'user_name' => $user->name,
+                    'user_email' => $user->email,
+                    'diploma_name' => $category->name,
+                    'completion_date' => $enrollment->completed_at ?? now(),
+                ]),
+            ]);
+        }
+
+        $data = is_array($certificate->certificate_data)
+            ? $certificate->certificate_data
+            : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+        return response()->json([
+            'certificate' => [
+                'id' => $certificate->id,
+                'verification_token' => $certificate->verification_token,
+                'verification_url' => url("/api/diploma-certificate/verify/{$certificate->verification_token}"),
+                'issued_at' => optional($certificate->issued_at)->toIso8601String(),
+                'completion_date' => optional($enrollment->completed_at)->toIso8601String(),
+                'file_path' => $this->filePathToUrl($certificate->file_path),
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'diploma' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                ],
+                'data' => $data,
+            ],
+        ]);
+    }
     /**
      * Generate and download certificate for completed course
      */
@@ -138,9 +299,9 @@ class CertificateController extends Controller
     public function verifyCertificate($token)
     {
         $certificate = Certificate::where('verification_token', $token)
-                                 ->with(['user', 'course'])
-                                 ->first();
-        
+            ->with(['user', 'course'])
+            ->first();
+
         if (!$certificate) {
             return response()->json([
                 'valid' => false,
@@ -148,18 +309,114 @@ class CertificateController extends Controller
             ], 404);
         }
 
-        $certificateData = json_decode($certificate->certificate_data, true);
-        
+        // If file_path is an external URL, redirect to it
+        if (!empty($certificate->file_path) && preg_match('/^https?:\/\//i', $certificate->file_path)) {
+            return redirect()->away($certificate->file_path);
+        }
+
+        // If file exists in local storage, stream it inline
+        if (!empty($certificate->file_path) && Storage::disk('public')->exists($certificate->file_path)) {
+            $filePath = Storage::disk('public')->path($certificate->file_path);
+            $fileName = "Certificate_{$certificate->course->title}_{$certificate->user->name}.pdf";
+            return response()->file($filePath, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $fileName . '"'
+            ]);
+        }
+
+        // Fallback: return certificate data JSON when no accessible file
+        $certificateData = is_array($certificate->certificate_data)
+            ? $certificate->certificate_data
+            : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
         return response()->json([
             'valid' => true,
             'certificate' => [
                 'id' => $certificate->id,
                 'user_name' => $certificate->user->name,
                 'course_title' => $certificate->course->title,
-                'issued_at' => $certificate->issued_at->format('F d, Y'),
+                'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
                 'completion_date' => $certificateData['completion_date'] ?? null,
-                'verification_token' => $certificate->verification_token
+                'verification_token' => $certificate->verification_token,
+                'file_path' => $certificate->file_path,
             ]
+        ]);
+    }
+
+    /**
+     * Update course certificate file path (user-owned)
+     */
+    public function updateCertificateFilePath($certificateId, Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->validate([
+            'file_path' => 'required|string|max:2048',
+        ]);
+
+        $certificate = Certificate::where('id', $certificateId)
+            ->where('user_id', $user->id)
+            ->with(['user', 'course'])
+            ->first();
+
+        if (!$certificate) {
+            return response()->json(['message' => 'الشهادة غير موجودة أو لا تخص هذا المستخدم'], 404);
+        }
+
+        $certificate->update(['file_path' => $data['file_path']]);
+
+        $payload = is_array($certificate->certificate_data)
+            ? $certificate->certificate_data
+            : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+        return response()->json([
+            'message' => 'تم تحديث مسار ملف الشهادة',
+            'certificate' => [
+                'id' => $certificate->id,
+                'verification_token' => $certificate->verification_token,
+                'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
+                'issued_at' => optional($certificate->issued_at)->toIso8601String(),
+                'file_path' => $this->filePathToUrl($certificate->file_path),
+                'user' => ['id' => $certificate->user->id, 'name' => $certificate->user->name],
+                'course' => ['id' => $certificate->course->id, 'title' => $certificate->course->title],
+                'data' => $payload,
+            ],
+        ]);
+    }
+
+    /**
+     * Update diploma certificate file path (user-owned)
+     */
+    public function updateDiplomaCertificateFilePath($certificateId, Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->validate([
+            'file_path' => 'required|string|max:2048',
+        ]);
+
+        $certificate = DiplomaCertificate::where('id', $certificateId)
+            ->where('user_id', $user->id)
+            ->with(['user', 'category'])
+            ->first();
+
+        if (!$certificate) {
+            return response()->json(['message' => 'شهادة الدبلومة غير موجودة أو لا تخص هذا المستخدم'], 404);
+        }
+
+        $certificate->update(['file_path' => $data['file_path']]);
+
+        $payload = is_array($certificate->certificate_data)
+            ? $certificate->certificate_data
+            : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+        return response()->json([
+            'message' => 'تم تحديث مسار ملف شهادة الدبلومة',
+            'certificate' => [
+                'id' => $certificate->id,
+                'verification_token' => $certificate->verification_token,
+                'verification_url' => url("/api/diploma-certificate/verify/{$certificate->verification_token}"),
+                'issued_at' => optional($certificate->issued_at)->toIso8601String(),
+                'file_path' => $this->filePathToUrl($certificate->file_path),
+                'user' => ['id' => $certificate->user->id, 'name' => $certificate->user->name],
+                'diploma' => ['id' => $certificate->category->id, 'name' => $certificate->category->name],
+                'data' => $payload,
+            ],
         ]);
     }
 
@@ -177,16 +434,19 @@ class CertificateController extends Controller
 
         return response()->json([
             'certificates' => $certificates->map(function($certificate) {
-                $certificateData = json_decode($certificate->certificate_data, true);
+                $certificateData = is_array($certificate->certificate_data)
+                    ? $certificate->certificate_data
+                    : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
                 
                 return [
                     'id' => $certificate->id,
-                    'course_title' => $certificate->course->title,
-                    'issued_at' => $certificate->issued_at->format('F d, Y'),
+                    'course_title' => optional($certificate->course)->title,
+                    'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
                     'completion_date' => $certificateData['completion_date'] ?? null,
                     'verification_token' => $certificate->verification_token,
                     'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
-                    'download_url' => url("/api/courses/{$certificate->course_id}/certificate")
+                    'file_path' => $this->filePathToUrl($certificate->file_path),
+                    'download_url' => url("/api/courses/{$certificate->course_id}/certificate"),
                 ];
             })
         ]);
@@ -218,7 +478,8 @@ class CertificateController extends Controller
                     'completion_date' => $data['completion_date'] ?? null,
                     'verification_token' => $certificate->verification_token,
                     'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
-                    'download_url' => url("/api/courses/{$certificate->course_id}/certificate")
+                    'file_path' => $this->filePathToUrl($certificate->file_path),
+                    'download_url' => url("/api/courses/{$certificate->course_id}/certificate"),
                 ];
             })
         ]);
@@ -302,5 +563,147 @@ class CertificateController extends Controller
             'total_eligible' => $completedUsers->count(),
             'generated' => $generatedCount
         ]);
+    }
+
+    /**
+     * Admin: Issue diploma certificate for a user if all courses are completed
+     */
+    public function issueDiplomaCertificate(Request $request, \App\Models\CategoryOfCourse $category)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = \App\Models\User::findOrFail($request->user_id);
+
+        // Verify active or completed enrollment exists
+        $enrollment = \App\Models\UserCategoryEnrollment::where('user_id', $user->id)
+            ->where('category_id', $category->id)
+            ->orderByDesc('status')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json([
+                'message' => 'المستخدم غير مُسجل في هذه الدبلومة.'
+            ], 403);
+        }
+
+        // Check that user has completed all courses in the category
+        $courses = $category->courses()->withoutGlobalScopes()->get();
+        $incomplete = [];
+        foreach ($courses as $course) {
+            $uc = \App\Models\UserCourse::where('user_id', $user->id)
+                ->where('course_id', $course->id)
+                ->first();
+            $passedFinal = false;
+            if ($uc) {
+                $passingScore = optional($course->finalExam)->passing_score ?? 50;
+                $passedFinal = !is_null($uc->final_exam_score) && $uc->final_exam_score >= (int)$passingScore;
+            }
+            $isCompleted = $uc && $uc->status === 'completed';
+            if (!($isCompleted || $passedFinal)) {
+                $incomplete[] = $course->title;
+            }
+        }
+
+        if (count($courses) === 0) {
+            return response()->json([
+                'message' => 'لا توجد مقررات ضمن هذه الدبلومة.'
+            ], 422);
+        }
+
+        if (!empty($incomplete)) {
+            return response()->json([
+                'message' => 'لا يمكن إصدار شهادة الدبلومة قبل إكمال جميع المقررات.',
+                'incomplete_courses' => $incomplete,
+            ], 403);
+        }
+
+        // Prevent duplicate issuance
+        $existing = \App\Models\DiplomaCertificate::where('user_id', $user->id)
+            ->where('category_id', $category->id)
+            ->first();
+
+        if ($existing) {
+            // Return existing download info
+            if ($existing->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($existing->file_path)) {
+                $path = \Illuminate\Support\Facades\Storage::disk('public')->path($existing->file_path);
+                $name = "Diploma_{$category->name}_{$user->name}.pdf";
+                return response()->download($path, $name);
+            }
+            // Regenerate file if missing (admin issuance only)
+            $this->generateDiplomaCertificatePDF($existing, $user, $category, $enrollment);
+            $path = \Illuminate\Support\Facades\Storage::disk('public')->path($existing->file_path);
+            $name = "Diploma_{$category->name}_{$user->name}.pdf";
+            return response()->download($path, $name);
+        }
+
+        // Create new diploma certificate
+        $verificationToken = \Illuminate\Support\Str::uuid();
+        $certificate = \App\Models\DiplomaCertificate::create([
+            'user_id' => $user->id,
+            'category_id' => $category->id,
+            'user_category_enrollment_id' => $enrollment->id,
+            'verification_token' => $verificationToken,
+            'issued_at' => now(),
+            'certificate_data' => json_encode([
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'diploma_name' => $category->name,
+                'completion_date' => $enrollment->completed_at ?? now(),
+            ]),
+        ]);
+
+        $this->generateDiplomaCertificatePDF($certificate, $user, $category, $enrollment);
+
+        $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path($certificate->file_path);
+        $fileName = "Diploma_{$category->name}_{$user->name}.pdf";
+        return response()->download($filePath, $fileName);
+    }
+
+    /**
+     * Generate Diploma PDF
+     */
+    private function generateDiplomaCertificatePDF(\App\Models\DiplomaCertificate $certificate, \App\Models\User $user, \App\Models\CategoryOfCourse $category, \App\Models\UserCategoryEnrollment $enrollment)
+    {
+        $verificationUrl = url("/api/diploma-certificate/verify/{$certificate->verification_token}");
+        $data = [
+            'user_name' => $user->name,
+            'diploma_name' => $category->name,
+            'completion_date' => ($enrollment->completed_at ?? now())->format('F d, Y'),
+            'verification_token' => $certificate->verification_token,
+            'verification_url' => $verificationUrl,
+            'certificate_id' => $certificate->id,
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('certificates.diploma', $data);
+        $pdf->setPaper('A4', 'landscape');
+        $filename = "diploma_certificate_{$certificate->id}_{$user->id}.pdf";
+        $pdfContent = $pdf->output();
+        \Illuminate\Support\Facades\Storage::disk('public')->put("certificates/{$filename}", $pdfContent);
+        $certificate->update(['file_path' => "certificates/{$filename}"]);
+    }
+
+    /**
+     * Student: Download diploma certificate
+     */
+    public function downloadDiplomaCertificate(\App\Models\CategoryOfCourse $category)
+    {
+        $user = Auth::user();
+        $certificate = \App\Models\DiplomaCertificate::where('user_id', $user->id)
+            ->where('category_id', $category->id)
+            ->first();
+
+        if (!$certificate) {
+            return response()->json(['message' => 'لم يتم إصدار شهادة لهذه الدبلومة بعد.'], 404);
+        }
+
+        if (!$certificate->file_path || !\Illuminate\Support\Facades\Storage::disk('public')->exists($certificate->file_path)) {
+            return response()->json(['message' => 'ملف الشهادة غير موجود.'], 404);
+        }
+
+        $path = \Illuminate\Support\Facades\Storage::disk('public')->path($certificate->file_path);
+        $name = "Diploma_{$category->name}_{$user->name}.pdf";
+        return response()->download($path, $name);
     }
 }

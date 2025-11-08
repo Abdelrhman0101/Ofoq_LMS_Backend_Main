@@ -22,12 +22,9 @@ class QuestionRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'question'=>'required|string',
-            // 'question_text' => 'required|string',
-            // 'question_type' => 'required|in:multiple_choice,true_false,short_answer',
-            'options' => 'required_if:question_type,multiple_choice|array',
-            'correct_answer' => 'required|string',
-            // 'points' => 'required|integer|min:1',
+            'question' => 'required|string',
+            'options' => 'required|array|min:3|max:4',
+            'correct_answer' => 'required',
         ];
 
         // For update requests, make fields optional
@@ -35,8 +32,8 @@ class QuestionRequest extends FormRequest
             $rules = array_map(function ($rule) {
                 return str_replace('required|', 'sometimes|', $rule);
             }, $rules);
-            // Keep required_if rule for options
-            $rules['options'] = 'required_if:question_type,multiple_choice|array';
+            // Keep options rule consistent
+            $rules['options'] = 'sometimes|required|array|min:3|max:4';
         }
 
         return $rules;
@@ -53,8 +50,10 @@ class QuestionRequest extends FormRequest
             'question_text.required' => 'Question text is required',
             'question_type.required' => 'Question type is required',
             'question_type.in' => 'Question type must be multiple_choice, true_false, or short_answer',
-            'options.required_if' => 'Options are required for multiple choice questions',
+            'options.required' => 'Options are required',
             'options.array' => 'Options must be an array',
+            'options.min' => 'Options must contain at least 3 items',
+            'options.max' => 'Options must not exceed 4 items',
             'correct_answer.required' => 'Correct answer is required',
             'points.required' => 'Points are required',
             'points.integer' => 'Points must be a number',

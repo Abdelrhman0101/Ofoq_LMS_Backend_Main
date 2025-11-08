@@ -431,7 +431,7 @@ class UserQuizController extends Controller
 
         $attempts = UserQuizAttempt::where('user_id', $user->id)
             ->where('quiz_id', $quizId)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
         return response()->json([

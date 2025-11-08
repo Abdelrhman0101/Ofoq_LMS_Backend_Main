@@ -147,6 +147,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courseEnroll/{course}', [CourseController::class, 'show']);
     Route::post('/courses/{id}/enroll', [UserCourseController::class, 'enroll']);
     Route::get('/my-enrollments', [UserCourseController::class, 'myEnrollments']);
+    // Student exams page: list courses and final exam status
+    Route::get('/my-tests', [FinalExamController::class, 'myTests']);
 
     // Diplomas enrollment
     Route::post('/categories/{category}/enroll', [UserCategoryEnrollmentController::class, 'enroll']);
@@ -155,6 +157,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Lessons - View and track progress
     Route::get('/lessons/{id}', [UserLessonController::class, 'show']);
+    // Lessons navigation info (prev/next, is_next_last)
+    Route::get('/lessons/{id}/navigation', [UserLessonController::class, 'navigation']);
     Route::post('/lessons/{id}/complete', [UserLessonController::class, 'complete']);
     Route::get('/courses/{courseId}/progress', [UserLessonController::class, 'getCourseProgress']);
 
@@ -177,8 +181,18 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Certificates - Generate and verify
     Route::get('/courses/{courseId}/certificate', [CertificateController::class, 'generateCertificate']);
+    // Certificate data only (frontend will render PDF)
+    Route::get('/courses/{courseId}/certificate/data', [CertificateController::class, 'getCourseCertificateData']);
     Route::get('/my-certificates', [CertificateController::class, 'myCertificates']);
     Route::post('/certificates/{certificateId}/regenerate', [CertificateController::class, 'regenerateCertificate']);
+    // Update file path after frontend generates PDF
+    Route::post('/certificates/{certificateId}/file', [CertificateController::class, 'updateCertificateFilePath']);
+    // Diploma certificate download (student)
+    Route::get('/categories/{category}/certificate', [CertificateController::class, 'downloadDiplomaCertificate']);
+    // Update diploma certificate file path after frontend generates PDF
+    Route::post('/diploma-certificates/{certificateId}/file', [CertificateController::class, 'updateDiplomaCertificateFilePath']);
+    // Diploma certificate data only (frontend will render PDF)
+    Route::get('/categories/{category}/certificate/data', [CertificateController::class, 'getDiplomaCertificateData']);
 
     // Admin-only certificate routes
     Route::middleware('role:admin')->group(function () {
@@ -187,10 +201,52 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Final Exam
     Route::get('/courses/{course}/final-exam/meta', [FinalExamController::class, 'meta']);
+    Route::get('/courses/{course}/final-exam/attempt/active', [FinalExamController::class, 'activeAttempt']);
     Route::post('/courses/{course}/final-exam/start', [FinalExamController::class, 'start']);
+    Route::post('/courses/{course}/final-exam/cancel/{attempt}', [FinalExamController::class, 'cancel']);
     Route::post('/courses/{course}/final-exam/submit/{attempt}', [FinalExamController::class, 'submit']);
     }); // end not_blocked group
 
 
 // Public certificate verification (no authentication required)
 Route::get('/certificate/verify/{token}', [CertificateController::class, 'verifyCertificate']);
+// Public diploma certificate verification (serve PDF or redirect to external URL)
+Route::get('/diploma-certificate/verify/{token}', function ($token) {
+    $cert = \App\Models\DiplomaCertificate::where('verification_token', $token)
+        ->with(['user', 'category'])
+        ->first();
+
+    if (!$cert) {
+        return response()->json(['valid' => false, 'message' => 'Diploma certificate not found or invalid token'], 404);
+    }
+
+    // If file_path is external URL, redirect
+    if (!empty($cert->file_path) && preg_match('/^https?:\/\//i', $cert->file_path)) {
+        return redirect()->away($cert->file_path);
+    }
+
+    // If file exists locally, stream it
+    if (!empty($cert->file_path) && \Illuminate\Support\Facades\Storage::disk('public')->exists($cert->file_path)) {
+        $path = \Illuminate\Support\Facades\Storage::disk('public')->path($cert->file_path);
+        $name = "Diploma_{$cert->category->name}_{$cert->user->name}.pdf";
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $name . '"'
+        ]);
+    }
+
+    // Fallback: return certificate data JSON
+    $data = json_decode($cert->certificate_data, true) ?? [];
+    return response()->json([
+        'valid' => true,
+        'certificate' => [
+            'id' => $cert->id,
+            'user_name' => $cert->user->name,
+            'diploma_name' => $cert->category->name,
+            'issued_at' => optional($cert->issued_at)->format('F d, Y'),
+            'completion_date' => $data['completion_date'] ?? null,
+            'verification_token' => $cert->verification_token,
+            'file_path' => $cert->file_path,
+        ],
+    ]);
+});

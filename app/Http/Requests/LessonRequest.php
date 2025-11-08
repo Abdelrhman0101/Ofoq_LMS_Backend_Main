@@ -45,8 +45,8 @@ class LessonRequest extends FormRequest
             'quiz.questions.*.id' => 'sometimes|exists:questions,id',
             'quiz.questions.*.question' => 'required|string',
             // 'quiz.questions.*.type' => 'required|in:multiple_choice,true_false,short_answer',
-            'quiz.questions.*.options' => 'required_if:quiz.questions.*.type,multiple_choice|array|min:2',
-            'quiz.questions.*.correct_answer' => 'required|string',
+            'quiz.questions.*.options' => 'required|array|min:3|max:4',
+            'quiz.questions.*.correct_answer' => 'required',
             'quiz.questions.*.explanation' => 'nullable|string',
             // 'quiz.questions.*.points' => 'sometimes|integer|min:1',
             // 'quiz.questions.*.delete' => 'sometimes|boolean',
@@ -58,8 +58,8 @@ class LessonRequest extends FormRequest
             }, $rules);
             $rules['quiz.title'] = 'sometimes|required_with:quiz|string|max:255';
             $rules['quiz.questions.*.question'] = 'sometimes|required|string';
-            $rules['quiz.questions.*.type'] = 'sometimes|required|in:multiple_choice,true_false,short_answer';
-            $rules['quiz.questions.*.correct_answer'] = 'sometimes|required|string';
+            $rules['quiz.questions.*.type'] = 'sometimes|in:multiple_choice,true_false,short_answer';
+            $rules['quiz.questions.*.correct_answer'] = 'sometimes|required';
         }
 
         return $rules;
@@ -97,6 +97,8 @@ class LessonRequest extends FormRequest
             // questions data
             'quiz.questions.*.question.required' => 'Each question must have text',
             'quiz.questions.*.correct_answer.required' => 'Each question must have a correct answer',
+            'quiz.questions.*.options.min' => 'Each question must have at least 3 options',
+            'quiz.questions.*.options.max' => 'Each question must have at most 4 options',
             'quiz.questions.*.options.array' => 'Options must be an array',
             'quiz.questions.*.explanation.string' => 'Explanation must be a string',
         ];

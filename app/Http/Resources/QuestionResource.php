@@ -17,42 +17,44 @@ class QuestionResource extends JsonResource
         $options = $this->options;
         if (is_string($options)) {
             $decodedOptions = json_decode($options, true);
-            // Check if decoding was successful and the result is an array
             if (json_last_error() === JSON_ERROR_NONE && is_array($decodedOptions)) {
                 $options = $decodedOptions;
             } else {
-                // If it's not a valid JSON string, return an empty array or handle as an error
                 $options = [];
             }
         } elseif (!is_array($options)) {
-            // If it's not a string or an array, default to an empty array
             $options = [];
         }
+        // Sanitize options: remove empty strings/nulls, reindex
+        $options = array_values(array_filter($options, function ($opt) {
+            if (is_null($opt)) return false;
+            if (is_string($opt)) return trim($opt) !== '';
+            return true;
+        }));
 
         $correctAnswer = $this->correct_answer;
         $correctIndex = null;
 
         if (is_numeric($correctAnswer)) {
-            // If it's already a numeric index, use it directly
-            $correctIndex = (int) $correctAnswer;
+            $idx = (int) $correctAnswer;
+            $correctIndex = array_key_exists($idx, $options) ? $idx : null;
         } elseif (is_string($correctAnswer)) {
-            // If it's a string, it could be a numeric string or the answer text
             if (ctype_digit($correctAnswer)) {
-                $correctIndex = (int) $correctAnswer;
+                $idx = (int) $correctAnswer;
+                $correctIndex = array_key_exists($idx, $options) ? $idx : null;
             } else {
-                // If it's text, find its index in the options array
-                $index = array_search($correctAnswer, $options);
+                $index = array_search($correctAnswer, $options, true);
                 if ($index !== false) {
                     $correctIndex = $index;
                 }
             }
         } elseif (is_array($correctAnswer) && !empty($correctAnswer)) {
-            // If it's an array, take the first element (assuming single-answer questions for now)
             $firstValue = $correctAnswer[0];
-            if (ctype_digit((string)$firstValue)) {
-                $correctIndex = (int) $firstValue;
+            if (ctype_digit((string) $firstValue)) {
+                $idx = (int) $firstValue;
+                $correctIndex = array_key_exists($idx, $options) ? $idx : null;
             } else {
-                $index = array_search($firstValue, $options);
+                $index = array_search($firstValue, $options, true);
                 if ($index !== false) {
                     $correctIndex = $index;
                 }

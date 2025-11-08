@@ -23,6 +23,5 @@ class Question extends Model
     ];
     protected $casts = [
         'options' => 'array',
-        'correct_answer' => 'array',
     ];
 }

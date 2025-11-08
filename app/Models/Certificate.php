@@ -34,12 +34,12 @@ class Certificate extends Model
     // Accessors shortcuts
     public function getUserAttribute()
     {
-        return $this->userCourse->user;
+        return optional($this->userCourse)->user;
     }
 
     public function getCourseAttribute()
     {
-        return $this->userCourse->course;
+        return optional($this->userCourse)->course;
     }
     public function user(): BelongsTo
     {

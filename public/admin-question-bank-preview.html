@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>بنك الأسئلة - معاينة</title>
+  <style>
+    :root {
+      --bg: #f7f7f9;
+      --card: #fff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --danger: #dc2626;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+    header { background: #fff; border-bottom: 1px solid var(--border); padding: 16px 24px; }
+    header h1 { margin: 0; font-size: 20px; }
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="text"], textarea, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+    textarea { min-height: 80px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-weight: 600; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-outline { background: #fff; color: var(--primary); border-color: var(--primary); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .list { display: grid; gap: 12px; }
+    .question-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .question-item h4 { margin: 0 0 8px; font-size: 15px; }
+    .options { display: grid; gap: 6px; margin-top: 8px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .flex { display: flex; align-items: center; gap: 8px; }
+    .space-between { display: flex; align-items: center; justify-content: space-between; }
+    .rtl { direction: rtl; }
+    .error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+    .success { background: #dcfce7; color: #14532d; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>بنك الأسئلة — معاينة واجهة عربية</h1>
+  </header>
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>توكن الأدمن (Sanctum)</label>
+          <input id="token" type="text" placeholder="أدخل التوكن هنا" />
+        </div>
+        <div>
+          <label>رقم المقرر</label>
+          <input id="courseId" type="text" value="1" />
+        </div>
+      </div>
+      <div style="margin-top:10px" class="flex">
+        <button id="loadCourse" class="btn btn-primary">تحميل الدروس والكويز</button>
+        <span id="status" class="muted"></span>
+      </div>
+      <div id="alerts"></div>
+    </div>
+
+    <div id="lessonsPanel" class="card" style="display:none">
+      <div class="space-between">
+        <h3 style="margin:0">دروس المقرر والكويز المرتبط</h3>
+        <span class="muted">اختر درسًا يحتوي على كويز أو أنشئ كويز</span>
+      </div>
+      <div id="lessonsList" class="list" style="margin-top:12px"></div>
+    </div>
+
+    <div id="questionsPanel" class="card" style="display:none">
+      <div class="space-between">
+        <h3 style="margin:0">بنك الأسئلة</h3>
+        <div class="muted">كويز رقم: <span id="activeQuizId"></span></div>
+      </div>
+      <div id="questionsList" class="list" style="margin-top:12px"></div>
+    </div>
+
+    <div id="createPanel" class="card" style="display:none">
+      <h3 style="margin:0 0 12px 0">إضافة سؤال جديد</h3>
+      <div id="formAlert"></div>
+      <label>نص السؤال</label>
+      <textarea id="qText" placeholder="اكتب نص السؤال هنا"></textarea>
+
+      <div class="row" style="margin-top:10px">
+        <div>
+          <label>الخيار 1</label>
+          <input id="opt1" type="text" placeholder="مثال: الخيار الأول" />
+        </div>
+        <div>
+          <label>الخيار 2</label>
+          <input id="opt2" type="text" placeholder="مثال: الخيار الثاني" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div>
+          <label>الخيار 3</label>
+          <input id="opt3" type="text" placeholder="مثال: الخيار الثالث" />
+        </div>
+        <div id="opt4Wrap" style="display:none">
+          <label>الخيار 4 (اختياري)</label>
+          <input id="opt4" type="text" placeholder="مثال: الخيار الرابع" />
+        </div>
+      </div>
+      <div class="flex" style="margin-top:10px">
+        <button id="toggleOpt4" class="btn btn-outline">إضافة/إخفاء الخيار الرابع</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>الإجابة الصحيحة</label>
+        <select id="correctSelect"></select>
+        <span class="muted">اختر الفهرس الصحيح حسب ترتيب الخيارات (0-3)</span>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>شرح الإجابة (اختياري)</label>
+        <textarea id="explanation" placeholder="اكتب شرحًا مختصرًا"></textarea>
+      </div>
+
+      <div class="flex" style="margin-top:12px">
+        <button id="submitQuestion" class="btn btn-primary">حفظ السؤال</button>
+        <span id="saveStatus" class="muted"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = 'http://127.0.0.1:8000/api';
+
+    const el = (id) => document.getElementById(id);
+
+    function setAlert(containerId, html, type='error') {
+      const c = el(containerId);
+      if (!c) return;
+      if (!html) { c.innerHTML=''; return; }
+      const cls = type === 'error' ? 'error' : 'success';
+      c.innerHTML = `<div class="${cls}">${html}</div>`;
+    }
+
+    function authHeaders() {
+      const token = el('token').value.trim();
+      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+
+    function buildCorrectSelect(options) {
+      const sel = el('correctSelect');
+      sel.innerHTML = '';
+      options.forEach((_, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `الخيار رقم ${idx + 1}`;
+        sel.appendChild(opt);
+      });
+    }
+
+    el('toggleOpt4').addEventListener('click', () => {
+      const wrap = el('opt4Wrap');
+      wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+      const options = collectOptions();
+      buildCorrectSelect(options);
+    });
+
+    function collectOptions() {
+      const vals = [el('opt1').value, el('opt2').value, el('opt3').value];
+      const opt4Visible = el('opt4Wrap').style.display !== 'none';
+      if (opt4Visible) vals.push(el('opt4').value);
+      return vals.filter(v => typeof v === 'string' && v.trim() !== '');
+    }
+
+    async function fetchCourse() {
+      setAlert('alerts','');
+      el('status').textContent = 'جارٍ التحميل...';
+      try {
+        const id = el('courseId').value.trim();
+        const res = await fetch(`${apiBase}/course/${id}`);
+        const data = await res.json();
+        if (!data?.data) throw new Error('لم يتم العثور على بيانات المقرر');
+        const chapters = data.data.chapters || [];
+        const lessonsList = el('lessonsList');
+        lessonsList.innerHTML='';
+        chapters.forEach(ch => {
+          (ch.lessons || []).forEach(lesson => {
+            const item = document.createElement('div');
+            item.className = 'question-item';
+            const quiz = lesson.quiz;
+            item.innerHTML = `
+              <div class="space-between">
+                <div>
+                  <h4>درس: ${lesson.title} (ID: ${lesson.id})</h4>
+                  <div class="muted">الكويز: ${quiz ? quiz.title + ' — ID ' + quiz.id : 'لا يوجد'}</div>
+                </div>
+                <div class="flex">
+                  ${quiz ? `<button class="btn btn-primary" data-action="select-quiz" data-quiz="${quiz.id}">فتح بنك الأسئلة</button>`
+                        : `<button class="btn btn-outline" data-action="create-quiz" data-lesson="${lesson.id}">إنشاء كويز للدرس</button>`}
+                </div>
+              </div>
+            `;
+            lessonsList.appendChild(item);
+          });
+        });
+        el('lessonsPanel').style.display = 'block';
+        el('status').textContent = 'تم التحميل.';
+      } catch (e) {
+        el('status').textContent = '';
+        setAlert('alerts', e.message || 'حدث خطأ غير متوقع');
+      }
+    }
+
+    async function createQuizForLesson(lessonId) {
+      const title = prompt('أدخل عنوان الكويز:', 'اختبار الدرس');
+      if (!title) return;
+      try {
+        const res = await fetch(`${apiBase}/lessons/${lessonId}/quiz`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders(),
+          },
+          body: JSON.stringify({ title })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || 'فشل إنشاء الكويز');
+        setAlert('alerts','تم إنشاء الكويز بنجاح.', 'success');
+        fetchCourse();
+      } catch (e) {
+        setAlert('alerts', e.message);
+      }
+    }
+
+    async function loadQuestions(quizId) {
+      el('activeQuizId').textContent = quizId;
+      el('questionsList').innerHTML = '';
+      setAlert('alerts','');
+      try {
+        const res = await fetch(`${apiBase}/quizzes/${quizId}/questions`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || 'فشل تحميل الأسئلة');
+        (data?.data || []).forEach(q => {
+          const div = document.createElement('div');
+          div.className = 'question-item';
+          const correctIdx = (q.correct_answer === 0 || q.correct_answer) ? q.correct_answer : null;
+          div.innerHTML = `
+            <div class="space-between">
+              <h4>سؤال #${q.id}: ${q.question}</h4>
+              <div class="flex">
+                <button class="btn btn-danger" data-action="delete-q" data-id="${q.id}">حذف</button>
+              </div>
+            </div>
+            <div class="options">
+              ${(q.options || []).map((opt, idx) => `<div>${idx+1}) ${opt} ${correctIdx===idx?'<strong>(الإجابة الصحيحة)</strong>':''}</div>`).join('')}
+            </div>
+            ${q.explanation ? `<div class="muted" style="margin-top:8px">شرح: ${q.explanation}</div>` : ''}
+          `;
+          el('questionsList').appendChild(div);
+        });
+        el('questionsPanel').style.display = 'block';
+        el('createPanel').style.display = 'block';
+        // Build correct select based on current option inputs
+        buildCorrectSelect(collectOptions());
+      } catch (e) {
+        setAlert('alerts', e.message);
+      }
+    }
+
+    async function deleteQuestion(id) {
+      if (!confirm('تأكيد حذف السؤال؟')) return;
+      try {
+        const res = await fetch(`${apiBase}/questions/${id}`, {
+          method: 'DELETE', headers: authHeaders()
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(()=>({}));
+          throw new Error(d?.message || 'فشل حذف السؤال');
+        }
+        setAlert('alerts','تم حذف السؤال.', 'success');
+        const quizId = el('activeQuizId').textContent;
+        loadQuestions(quizId);
+      } catch (e) {
+        setAlert('alerts', e.message);
+      }
+    }
+
+    async function saveQuestion() {
+      setAlert('formAlert','');
+      el('saveStatus').textContent = 'جارٍ الحفظ...';
+      try {
+        const quizId = el('activeQuizId').textContent.trim();
+        if (!quizId) throw new Error('اختر كويزًا أولاً');
+        const question = el('qText').value.trim();
+        const options = collectOptions();
+        if (!question) throw new Error('نص السؤال مطلوب');
+        if (options.length < 3 || options.length > 4) throw new Error('يجب أن تكون الخيارات بين 3 و4');
+        const correct = el('correctSelect').value;
+        const explanation = el('explanation').value.trim();
+
+        const payload = { question, options, correct_answer: correct };
+        if (explanation) payload.explanation = explanation;
+
+        const res = await fetch(`${apiBase}/quizzes/${quizId}/questions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders(),
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const msg = data?.message || (data?.errors ? Object.values(data.errors).flat().join('، ') : 'فشل حفظ السؤال');
+          throw new Error(msg);
+        }
+        el('saveStatus').textContent = '';
+        setAlert('formAlert','تم حفظ السؤال بنجاح.', 'success');
+        el('qText').value = '';
+        el('opt1').value = '';
+        el('opt2').value = '';
+        el('opt3').value = '';
+        el('opt4').value = '';
+        buildCorrectSelect([]);
+        loadQuestions(quizId);
+      } catch (e) {
+        el('saveStatus').textContent = '';
+        setAlert('formAlert', e.message);
+      }
+    }
+
+    // Event bindings
+    el('loadCourse').addEventListener('click', fetchCourse);
+    el('submitQuestion').addEventListener('click', saveQuestion);
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button');
+      if (!btn) return;
+      const action = btn.getAttribute('data-action');
+      if (action === 'create-quiz') {
+        const lessonId = btn.getAttribute('data-lesson');
+        createQuizForLesson(lessonId);
+      }
+      if (action === 'select-quiz') {
+        const quizId = btn.getAttribute('data-quiz');
+        loadQuestions(quizId);
+      }
+      if (action === 'delete-q') {
+        const id = btn.getAttribute('data-id');
+        deleteQuestion(id);
+      }
+    });
+  </script>
+</body>
+</html>

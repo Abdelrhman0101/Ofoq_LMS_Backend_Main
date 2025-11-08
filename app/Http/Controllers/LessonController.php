@@ -141,15 +141,41 @@ class LessonController extends Controller
 
                         // ➕ Insert new questions
                         foreach ($quizData['questions'] as $questionData) {
+                            // Sanitize options: keep 3–4 non-empty values, reindex
+                            $rawOptions = $questionData['options'] ?? [];
+                            $options = array_values(array_filter(is_array($rawOptions) ? $rawOptions : [], function ($opt) {
+                                if (is_null($opt)) return false;
+                                if (is_string($opt)) return trim($opt) !== '';
+                                return true;
+                            }));
+                            if (count($options) < 3 || count($options) > 4) {
+                                // Skip invalid question silently to avoid breaking update
+                                continue;
+                            }
+
+                            // Normalize correct_answer to index (0-based)
+                            $correct = $questionData['correct_answer'] ?? null;
+                            if (is_null($correct)) {
+                                // Default to first option if missing
+                                $correct = '0';
+                            } elseif (is_numeric($correct)) {
+                                $idx = (int) $correct;
+                                if (!array_key_exists($idx, $options)) {
+                                    // If out of range, default to first option
+                                    $idx = 0;
+                                }
+                                $correct = (string) $idx;
+                            } else {
+                                $text = (string) $correct;
+                                $idx = array_search($text, $options, true);
+                                $correct = (string) ($idx === false ? 0 : $idx);
+                            }
+
                             Question::create([
                                 'quiz_id' => $quiz->id,
                                 'question' => $questionData['question'] ?? '',
-                                'type' => $questionData['type'] ?? 'multiple_choice',
-                                'options' => isset($questionData['options'])
-                                    ? json_encode($questionData['options'])
-                                    : null,
-                                'correct_answer' => $questionData['correct_answer'] ?? '',
-                                'points' => $questionData['points'] ?? 1,
+                                'options' => $options,
+                                'correct_answer' => $correct,
                                 'explanation' => $questionData['explanation'] ?? null,
                             ]);
                         }
