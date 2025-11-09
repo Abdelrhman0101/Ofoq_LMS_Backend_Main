@@ -64,6 +64,10 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('final_exam_meta', function (Request $request) {
             return Limit::perMinute(300)->by(optional($request->user())->id ?: $request->ip());
         });
+        // Typed alias to satisfy environments that resolve limiter as App\Models\User::final_exam_meta
+        RateLimiter::for(User::class.'::final_exam_meta', function (Request $request) {
+            return Limit::perMinute(300)->by(optional($request->user())->id ?: $request->ip());
+        });
     }
 }
 
