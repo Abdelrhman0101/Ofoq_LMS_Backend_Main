@@ -32,7 +32,7 @@ class Course extends Model
 
     public function chapters(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(\App\Models\Chapter::class);
+        return $this->hasMany(\App\Models\Chapter::class)->orderBy('order');
     }
     public function featured()
     {
