@@ -296,13 +296,12 @@ class UserLessonController extends Controller
             ], 403);
         }
 
-        // بناء قائمة الدروس مرتبة حسب ترتيب الفصول ثم الدروس (يُستبعد غير المرئي)
+        // بناء قائمة الدروس مرتبة حسب ترتيب الفصول ثم الدروس للمسجلين في المقرر
         $orderedLessons = Lesson::query()
             ->join('chapters', 'lessons.chapter_id', '=', 'chapters.id')
             ->where('chapters.course_id', $course->id)
-            ->where('lessons.is_visible', true)
-            ->orderBy('chapters.order')
-            ->orderBy('lessons.order')
+            ->orderByRaw('COALESCE(chapters.`order`, chapters.id)')
+            ->orderByRaw('COALESCE(lessons.`order`, lessons.id)')
             ->select(['lessons.id'])
             ->get();
 
