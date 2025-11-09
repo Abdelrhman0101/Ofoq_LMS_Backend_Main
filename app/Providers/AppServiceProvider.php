@@ -38,6 +38,14 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
         });
 
+        // Mirror route-specific limiter for final exam meta here to match environments
+        RateLimiter::for('final_exam_meta', function (Request $request) {
+            return Limit::perMinute(300)->by(optional($request->user())->id ?: $request->ip());
+        });
+        RateLimiter::for(User::class . '::final_exam_meta', function (Request $request) {
+            return Limit::perMinute(300)->by(optional($request->user())->id ?: $request->ip());
+        });
+
         Route::prefix('api/admin')
             ->middleware(['api', 'auth:sanctum', 'role:admin'])
             ->group(base_path('routes/admin.php'));
