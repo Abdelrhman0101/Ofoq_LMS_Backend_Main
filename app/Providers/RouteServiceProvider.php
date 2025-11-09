@@ -60,6 +60,10 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for(User::class.'::api', function (Request $request) {
             return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
         });
+        // Route-specific rate limiter for final exam meta to allow more frequent checks
+        RateLimiter::for('final_exam_meta', function (Request $request) {
+            return Limit::perMinute(300)->by(optional($request->user())->id ?: $request->ip());
+        });
     }
 }
 

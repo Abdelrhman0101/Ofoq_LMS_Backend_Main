@@ -200,7 +200,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Final Exam
-    Route::get('/courses/{course}/final-exam/meta', [FinalExamController::class, 'meta']);
+    Route::get('/courses/{course}/final-exam/meta', [FinalExamController::class, 'meta'])
+        ->withoutMiddleware('throttle:api')
+        ->middleware('throttle:final_exam_meta');
     Route::get('/courses/{course}/final-exam/attempt/active', [FinalExamController::class, 'activeAttempt']);
     Route::post('/courses/{course}/final-exam/start', [FinalExamController::class, 'start']);
     Route::post('/courses/{course}/final-exam/cancel/{attempt}', [FinalExamController::class, 'cancel']);
