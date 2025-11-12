@@ -42,8 +42,19 @@ class GenerateCertificateJob implements ShouldQueue
 
             Log::info('Data gathered', ['user' => $user->name, 'course' => $course->title]);
 
-            // 2. Generate unique serial number
-            $serial = Str::upper(Str::random(7));
+            // 2. Generate unique serial number (7 digits only)
+            // توليد رقم تسلسلي فريد (7 أرقام فقط)
+            $serial = null;
+            do {
+                // 1. توليد رقم عشوائي بين 0 و 9999999
+                $random = mt_rand(0, 9999999);
+
+                // 2. تحويله لنص وإضافة أصفار على اليسار لضمان طول 7 خانات (مثلاً: 0054321)
+                $serial = str_pad($random, 7, '0', STR_PAD_LEFT);
+
+                // 3. التأكد من أنه غير مستخدم من قبل (Loop until unique)
+            } while (CourseCertificate::where('serial_number', $serial)->exists());
+            
             Log::info('Serial generated', ['serial' => $serial]);
 
             // Get course hours (using hours_count field)

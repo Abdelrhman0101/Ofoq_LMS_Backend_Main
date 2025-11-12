@@ -20,6 +20,7 @@ use App\Http\Controllers\DiplomaController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\Admin\InstructorController as AdminInstructorController;
 use App\Http\Controllers\Admin\FeaturedCourseController as AdminFeaturedCourseController;
 use App\Http\Controllers\LessonNoteController;
@@ -52,6 +53,9 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 // Social authentication routes
 Route::get('auth/google', [SocialAuthController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
+
+// Public certificate verification route
+Route::get('/public/verify-certificate', [CertificateVerificationController::class, 'verify']);
 
 // Public reviews listing for a course
 Route::get('/courses/{courseId}/reviews', [ReviewController::class, 'index']);
