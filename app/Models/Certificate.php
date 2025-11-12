@@ -17,6 +17,8 @@ class Certificate extends Model
         'course_id',
         'user_course_id',
         'verification_token',
+        'serial_number',
+        'student_name',
         'file_path',
         'certificate_data',
         'issued_at'

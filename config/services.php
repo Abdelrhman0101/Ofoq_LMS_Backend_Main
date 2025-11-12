@@ -41,4 +41,10 @@ return [
     'redirect' => env('GOOGLE_REDIRECT_URL'),
     ],
 
+    'certificate_generator' => [
+        'url' => env('CERTIFICATE_GENERATOR_URL', 'http://localhost:3000'),
+        'api_key' => env('CERTIFICATE_GENERATOR_API_KEY', ''),
+        'timeout' => env('CERTIFICATE_GENERATOR_TIMEOUT', 60),
+    ],
+
 ];

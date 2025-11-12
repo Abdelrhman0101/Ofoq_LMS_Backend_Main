@@ -336,11 +336,19 @@ class FinalExamController extends Controller
             if (!$userCourse->certificate) {
                 // Create certificate record with data
                 $verificationToken = \Illuminate\Support\Str::uuid();
+                // Generate unique serial number
+                $prefix = 'OFQ-' . now()->format('Y');
+                do {
+                    $random = strtoupper(\Illuminate\Support\Str::random(6));
+                    $serialNumber = $prefix . '-' . $random;
+                } while (\App\Models\Certificate::where('serial_number', $serialNumber)->exists());
                 $certificate = Certificate::create([
                     'user_id' => Auth::id(),
                     'course_id' => $course->id,
                     'user_course_id' => $userCourse->id,
                     'verification_token' => $verificationToken,
+                    'serial_number' => $serialNumber,
+                    'student_name' => Auth::user()->name,
                     'issued_at' => now(),
                     'certificate_data' => json_encode([
                         'user_name' => Auth::user()->name,
@@ -362,6 +370,7 @@ class FinalExamController extends Controller
                     'verification_token' => $certificate->verification_token,
                     'verification_url' => $verificationUrl,
                     'certificate_id' => $certificate->id,
+                    'serial_number' => $certificate->serial_number,
                 ];
 
                 $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('certificates.template', $data);

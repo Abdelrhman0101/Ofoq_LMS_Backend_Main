@@ -181,6 +181,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Certificates - Generate and verify
     Route::get('/courses/{courseId}/certificate', [CertificateController::class, 'generateCertificate']);
+    // Request certificate (new certificate request system)
+    Route::post('/courses/{courseId}/request-certificate', [CertificateController::class, 'requestCertificate']);
+    // Get certificate status (for frontend to know initial state)
+    Route::get('/courses/{courseId}/certificate-status', [CertificateController::class, 'getCertificateStatus']);
     // Certificate data only (frontend will render PDF)
     Route::get('/courses/{courseId}/certificate/data', [CertificateController::class, 'getCourseCertificateData']);
     Route::get('/my-certificates', [CertificateController::class, 'myCertificates']);
@@ -199,6 +203,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/certificates/bulk-generate', [CertificateController::class, 'bulkGenerate']);
     });
 
+    // External certificate generation tool routes
+    Route::prefix('external')->group(function () {
+        // Get pending certificates for PDF generation
+        Route::get('/certificates/pending', [CertificateController::class, 'getPendingCertificates']);
+        // Update certificate with generated PDF file path
+        Route::post('/certificates/{certificateId}/file', [CertificateController::class, 'updateCertificateFilePathExternal']);
+    });
+
     // Final Exam
     Route::get('/courses/{course}/final-exam/meta', [FinalExamController::class, 'meta'])
         ->withoutMiddleware('throttle:api')
@@ -212,6 +224,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Public certificate verification (no authentication required)
 Route::get('/certificate/verify/{token}', [CertificateController::class, 'verifyCertificate']);
+Route::get('/course-certificate/verify/{token}', [CertificateController::class, 'verifyCourseCertificate']);
 // Public diploma certificate verification (serve PDF or redirect to external URL)
 Route::get('/diploma-certificate/verify/{token}', function ($token) {
     $cert = \App\Models\DiplomaCertificate::where('verification_token', $token)
@@ -248,6 +261,7 @@ Route::get('/diploma-certificate/verify/{token}', function ($token) {
             'issued_at' => optional($cert->issued_at)->format('F d, Y'),
             'completion_date' => $data['completion_date'] ?? null,
             'verification_token' => $cert->verification_token,
+            'serial_number' => $cert->serial_number,
             'file_path' => $cert->file_path,
         ],
     ]);

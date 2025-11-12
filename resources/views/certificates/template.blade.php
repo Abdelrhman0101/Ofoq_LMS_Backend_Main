@@ -1,243 +1,257 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate of Completion</title>
+    <title>شهادة إتمام الدورة</title>
     <style>
-        @page {
-            margin: 0;
-            size: A4 landscape;
+        @page { 
+            margin: 0; 
+            size: A4 landscape; 
         }
         
-        body {
-            font-family: 'Georgia', serif;
-            margin: 0;
-            padding: 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            height: 100vh;
-            box-sizing: border-box;
-        }
-        
-        .certificate {
-            background: white;
-            border: 20px solid #f8f9fa;
-            border-radius: 20px;
-            padding: 60px;
-            text-align: center;
-            height: calc(100% - 120px);
+        body { 
+            font-family: 'DejaVu Sans', 'Arial', 'Tahoma', 'Amiri', 'Noto Naskh Arabic', sans-serif; 
+            margin: 0; 
+            padding: 0;
+            background: #f8f9fa;
+            color: #2c3e50;
+            direction: rtl;
             position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            text-align: right;
         }
         
-        .certificate::before {
-            content: '';
-            position: absolute;
-            top: 40px;
-            left: 40px;
-            right: 40px;
-            bottom: 40px;
-            border: 3px solid #667eea;
-            border-radius: 10px;
+        .certificate-container {
+            width: 297mm;
+            height: 210mm;
+            position: relative;
+            background-image: url('{{ public_path("storage/certifecate_cover.jpg") }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         
-        .header {
+        .certificate-content {
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+            padding: 60px 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .certificate-header {
             margin-bottom: 40px;
         }
         
-        .title {
-            font-size: 48px;
+        .certificate-title {
+            font-size: 42px;
             font-weight: bold;
-            color: #667eea;
+            color: #2c3e50;
             margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            font-family: 'DejaVu Sans', 'Arial', 'Tahoma', 'Amiri', 'Noto Naskh Arabic', sans-serif;
+            text-align: center;
         }
         
-        .subtitle {
-            font-size: 24px;
-            color: #666;
-            margin-bottom: 40px;
+        .certificate-subtitle {
+            font-size: 20px;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-family: 'DejaVu Sans', 'Arial', 'Tahoma', 'Amiri', 'Noto Naskh Arabic', sans-serif;
         }
         
-        .recipient {
+        .recipient-section {
             margin: 40px 0;
         }
         
         .recipient-label {
             font-size: 18px;
-            color: #666;
-            margin-bottom: 10px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
         }
         
         .recipient-name {
             font-size: 36px;
             font-weight: bold;
-            color: #333;
-            border-bottom: 2px solid #667eea;
-            display: inline-block;
+            color: #e74c3c;
+            margin-bottom: 20px;
             padding-bottom: 10px;
-            margin-bottom: 30px;
+            border-bottom: 3px solid #3498db;
+            display: inline-block;
+            font-family: 'DejaVu Sans', 'Arial', 'Tahoma', 'Amiri', 'Noto Naskh Arabic', sans-serif;
         }
         
-        .course-info {
+        .course-section {
             margin: 40px 0;
         }
         
-        .course-label {
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 10px;
+        .course-description {
+            font-size: 20px;
+            color: #34495e;
+            margin-bottom: 15px;
+            line-height: 1.6;
         }
         
         .course-title {
             font-size: 28px;
             font-weight: bold;
-            color: #764ba2;
-            margin-bottom: 20px;
+            color: #27ae60;
+            margin-bottom: 10px;
         }
         
         .completion-date {
             font-size: 18px;
-            color: #666;
-            margin: 30px 0;
+            color: #7f8c8d;
+            margin: 20px 0;
         }
         
-        .footer {
-            position: absolute;
-            bottom: 60px;
-            left: 60px;
-            right: 60px;
+        .certificate-details {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-end;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #ecf0f1;
         }
         
-        .verification {
-            text-align: left;
+        .verification-section {
+            text-align: right;
         }
         
         .verification-label {
-            font-size: 12px;
-            color: #666;
+            font-size: 14px;
+            color: #7f8c8d;
             margin-bottom: 5px;
         }
         
         .verification-token {
-            font-size: 10px;
-            color: #999;
+            font-size: 12px;
+            color: #95a5a6;
             font-family: monospace;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
         }
         
-        .signature {
-            text-align: right;
-        }
-        
-        .signature-line {
-            border-top: 2px solid #333;
-            width: 200px;
-            margin-bottom: 10px;
-        }
-        
-        .signature-label {
+        .serial-number {
             font-size: 14px;
-            color: #666;
+            color: #7f8c8d;
+            font-weight: bold;
         }
         
-        .decorative-element {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            opacity: 0.1;
-        }
-        
-        .decorative-element.top-left {
-            top: 20px;
-            left: 20px;
-            background: radial-gradient(circle, #667eea 0%, transparent 70%);
-        }
-        
-        .decorative-element.top-right {
-            top: 20px;
-            right: 20px;
-            background: radial-gradient(circle, #764ba2 0%, transparent 70%);
-        }
-        
-        .decorative-element.bottom-left {
-            bottom: 20px;
-            left: 20px;
-            background: radial-gradient(circle, #764ba2 0%, transparent 70%);
-        }
-        
-        .decorative-element.bottom-right {
-            bottom: 20px;
-            right: 20px;
-            background: radial-gradient(circle, #667eea 0%, transparent 70%);
+        .qr-section {
+            text-align: center;
         }
         
         .qr-code {
-            position: absolute;
-            bottom: 80px;
-            right: 80px;
             width: 80px;
             height: 80px;
             background: white;
-            border: 2px solid #667eea;
+            border: 2px solid #3498db;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
-            color: #667eea;
-            text-align: center;
+            color: #3498db;
+            margin: 0 auto 10px;
+        }
+        
+        .qr-label {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .digital-seal {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 100px;
+            height: 100px;
+            opacity: 0.8;
+        }
+        
+        .exam-score {
+            background: #e8f5e8;
+            border: 2px solid #27ae60;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 16px;
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        @media print {
+            .certificate-container {
+                background-image: url('{{ public_path("storage/certifecate_cover.jpg") }}') !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="certificate">
-        <div class="decorative-element top-left"></div>
-        <div class="decorative-element top-right"></div>
-        <div class="decorative-element bottom-left"></div>
-        <div class="decorative-element bottom-right"></div>
-        
-        <div class="header">
-            <div class="title">Certificate</div>
-            <div class="subtitle">of Completion</div>
-        </div>
-        
-        <div class="recipient">
-            <div class="recipient-label">This is to certify that</div>
-            <div class="recipient-name">{{ $user_name }}</div>
-        </div>
-        
-        <div class="course-info">
-            <div class="course-label">has successfully completed the course</div>
-            <div class="course-title">{{ $course_title }}</div>
-        </div>
-        
-        <div class="completion-date">
-            Completed on {{ $completion_date }}
-        </div>
-        
-        <div class="footer">
-            <div class="verification">
-                <div class="verification-label">Certificate ID:</div>
-                <div class="verification-token">{{ $certificate_id }}</div>
-                <div class="verification-label" style="margin-top: 10px;">Verification Token:</div>
-                <div class="verification-token">{{ $verification_token }}</div>
+    <div class="certificate-container">
+        <div class="certificate-content">
+            <div class="certificate-header">
+                <div class="certificate-title">شهادة إتمام الدورة التدريبية</div>
+                <div class="certificate-subtitle">تشهد إدارة منصة أُفُق بأن</div>
             </div>
             
-            <div class="signature">
-                <div class="signature-line"></div>
-                <div class="signature-label">Authorized Signature</div>
+            <div class="recipient-section">
+                <div class="recipient-label">الطالب/ة</div>
+                <div class="recipient-name">{{ $user_name }}</div>
+            </div>
+            
+            <div class="course-section">
+                <div class="course-description">قد اجتاز بنجاح دورة</div>
+                <div class="course-title">{{ $course_title }}</div>
+                @if(isset($final_exam_score) && $final_exam_score > 0)
+                <div class="exam-score">
+                    بنسبة نجاح: {{ $final_exam_score }}%
+                </div>
+                @endif
+                <div class="completion-date">
+                    وذلك بتاريخ: {{ $completion_date }}
+                </div>
+            </div>
+            
+            <div class="certificate-details">
+                <div class="verification-section">
+                    <div class="verification-label">رقم الشهادة</div>
+                    <div class="serial-number">{{ $serial_number }}</div>
+                    <div class="verification-label" style="margin-top: 10px;">رمز التحقق</div>
+                    <div class="verification-token">{{ $verification_token }}</div>
+                </div>
+                
+                <div class="qr-section">
+                    <div class="qr-code">
+                        @if(isset($qr_code_image))
+                        <img src="{{ $qr_code_image }}" alt="QR Code" style="width: 100%; height: 100%;">
+                        @else
+                        رمز QR
+                        @endif
+                    </div>
+                    <div class="qr-label">للتحقق اضغط هنا</div>
+                </div>
             </div>
         </div>
         
-        <div class="qr-code">
-            QR Code<br>
-            Verify at:<br>
-            <small>{{ $verification_url }}</small>
+        @if(isset($digital_seal))
+        <div class="digital-seal">
+            <img src="{{ $digital_seal }}" alt="Digital Seal" style="width: 100%; height: 100%;">
         </div>
+        @endif
     </div>
 </body>
 </html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Preview</title>
+    <style>
+        body {
+            font-family: 'Tajawal', 'Arial', 'Tahoma', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .certificate-page {
+            width: 297mm;
+            height: 210mm;
+            position: relative;
+            background: white;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: 2px solid #d4af37;
+            transform: scale(0.3);
+            transform-origin: top center;
+        }
+        
+        .certificate-border {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 1px solid #d4af37;
+            border-radius: 10px;
+        }
+        
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+        
+        .header-decoration {
+            text-align: center;
+            padding-top: 40px;
+            margin-bottom: 30px;
+        }
+        
+        .header-decoration::before,
+        .header-decoration::after {
+            content: '';
+            display: inline-block;
+            width: 100px;
+            height: 2px;
+            background: #d4af37;
+            vertical-align: middle;
+            margin: 0 20px;
+        }
+        
+        .content-container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px 60px;
+            min-height: 500px;
+        }
+        
+        .certificate-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #1a237e;
+            margin-bottom: 30px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .student-name {
+            font-size: 36px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 2px solid #d4af37;
+            display: inline-block;
+        }
+        
+        .certificate-text {
+            font-size: 20px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        
+        .course-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a237e;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 8px;
+            border: 1px solid #d4af37;
+        }
+        
+        .hours-info {
+            font-size: 22px;
+            font-weight: bold;
+            color: #d4af37;
+            margin: 20px 0;
+        }
+        
+        .diploma-info {
+            font-size: 20px;
+            color: #1a237e;
+            margin: 20px 0;
+            font-style: italic;
+        }
+        
+        .completion-date {
+            font-size: 18px;
+            color: #666;
+            margin-top: 40px;
+            font-weight: bold;
+        }
+        
+        .certificate-footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #d4af37;
+        }
+        
+        .serial-number {
+            font-size: 14px;
+            color: #888;
+            margin-top: 20px;
+        }
+        
+        .verification-info {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+        
+        .preview-note {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-note">
+        <h2>معاينة شهادة إتمام الدورة التدريبية</h2>
+        <p>هذه معاينة للشهادة التي سيتم إنشاؤها بصيغة PDF</p>
+    </div>
+    
+    <div class="certificate-page">
+        <img src="storage/certificate_bg.svg" class="background-image" alt="Certificate Background">
+        
+        <div class="certificate-border">
+            <div class="content-container">
+                
+                <div class="header-decoration"></div>
+                
+                <h1 class="certificate-title">شهادة إتمام الدورة التدريبية</h1>
+                
+                <div class="student-name">أحمد محمد عبد الله</div>
+                
+                <div class="certificate-text">
+                    <p>يسرنا أن نمنح هذه الشهادة تقديراً لإتمام الدورة التدريبية</p>
+                </div>
+                
+                <div class="course-title">أساسيات البرمجة بلغة بايثون</div>
+                
+                <div class="hours-info">
+                    بواقع 40 ساعة تدريبية
+                </div>
+                
+                <div class="diploma-info">
+                    ضمن دبلومة: دبلوم البرمجة الحديثة
+                </div>
+                
+                <div class="certificate-text">
+                    <p>وقد أظهر المهارات والمعرفة المطلوبة بنجاح.</p>
+                    <p>نتمنى له دوام التوفيق والنجاح في مسيرته المستقبلية.</p>
+                </div>
+                
+                <div class="completion-date">
+                    منحت هذه الشهادة بتاريخ: 15 ديسمبر 2024
+                </div>
+                
+                <div class="certificate-footer">
+                    <div class="serial-number">
+                        رقم الشهادة: TEST-123-456
+                    </div>
+                    <div class="verification-info">
+                        للتحقق من صحة هذه الشهادة، يرجى زيارة:<br>
+                        https://ofuq-platform.com/certificates/verify/abc123xyz789
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</body>
+</html>

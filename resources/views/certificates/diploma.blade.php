@@ -21,6 +21,7 @@
         .signature-line { border-top: 2px solid #333; width: 200px; margin-bottom: 10px; }
         .signature-label { font-size: 14px; color: #666; }
         .qr-code { position: absolute; bottom: 80px; left: 80px; width: 80px; height: 80px; background: white; border: 2px solid #2b6cb0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #2b6cb0; text-align: center; }
+        .serial { position: absolute; bottom: 18px; left: 30px; font-size: 12px; color: #000; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -52,6 +53,7 @@
             رابط التحقق:<br>
             <small>{{ $verification_url }}</small>
         </div>
+        <div class="serial">{{ $serial_number }}</div>
     </div>
 </body>
 </html>

@@ -43,5 +43,7 @@ Route::get('categories/{category}/final-exam', [CategoryFinalExamController::cla
 Route::post('categories/{category}/final-exam', [CategoryFinalExamController::class, 'store']);
 Route::delete('users/{user}', [UserController::class, 'destroy']);
 Route::get('users/{user}/certificates', [CertificateController::class, 'userCertificatesAdmin']);
+// Search certificates by serial number (admin)
+Route::get('certificates/search', [CertificateController::class, 'searchCertificatesAdmin']);
 // إصدار شهادة دبلومة (للأدمن فقط) بشرط إكمال جميع المقررات
 Route::post('categories/{category}/certificate', [CertificateController::class, 'issueDiplomaCertificate']);

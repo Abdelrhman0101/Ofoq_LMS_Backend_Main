@@ -15,6 +15,8 @@ class DiplomaCertificate extends Model
         'category_id',
         'user_category_enrollment_id',
         'verification_token',
+        'serial_number',
+        'student_name',
         'file_path',
         'certificate_data',
         'issued_at',

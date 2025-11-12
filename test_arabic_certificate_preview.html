@@ -1,0 +1,123 @@
+<!DOCTYPE html> 
+<html lang="ar" dir="rtl"> 
+<head> 
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="UTF-8">
+    
+    <!-- DomPDF specific settings for Arabic text -->
+    <meta name="pdf:encoding" content="UTF-8">
+    <meta name="pdf:font-embedding" content="true">
+
+    <style> 
+        /* الخطوة 2: حل مشكلة الصفحة (بالطول) + تضمين الخطوط */
+        
+        /* ضبط الصفحة لتكون بالعرض (Landscape) وبدون هوامش */
+        @page { 
+            size: A4 landscape; /* تحديد المقاس بالعرض */ 
+            margin: 0; 
+        } 
+
+        /* تضمين الخطوط (ضروري جداً لحل مشكلة ؟؟؟)
+          تأكد من وجود هذا الخط في المسار: public/fonts/Tajawal-Regular.ttf
+        */ 
+        @font-face { 
+            font-family: 'Tajawal'; 
+            src: url('E:\Work\Code\Dwam Projects\Ofuq\Ofoq_Backend\public\fonts/Tajawal-Regular.ttf') format('truetype'); 
+            font-weight: normal; 
+            font-style: normal; 
+            unicode-range: U+0600-06FF, U+0750-077F; /* Arabic character range */
+        } 
+
+        body { 
+            /* استخدام الخط الذي قمنا بتضمينه */ 
+            font-family: 'Tajawal', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+        } 
+
+        /* الخطوة 3: حل مشكلة (الخلفية)
+        */ 
+
+        /* حاوية الخلفية (لجعلها 100% خلف كل شيء) */ 
+        .background-image { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: -1; /* اجعلها في الخلف */ 
+        } 
+
+        /* حاوية النص (لتكون فوق الخلفية) */ 
+        .content-container { 
+            position: relative; /* اجعلها في الأمام */ 
+            z-index: 10; 
+            text-align: center; 
+            padding-top: 150px; /* اضبط المسافة من الأعلى حسب التصميم */ 
+            width: 80%; 
+            margin: 0 auto; /* توسيط الحاوية */ 
+        } 
+
+        /* تنسيقات النص (كمثال - يمكنك تعديلها) */ 
+        .content-container h1 { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #333; 
+        } 
+        
+        .content-container h2 { 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #0056b3; /* لون أزرق */ 
+        } 
+
+        .content-container p { 
+            font-size: 18px; 
+            line-height: 1.6; 
+            color: #555; 
+        } 
+        
+        .content-container .course-title { 
+            font-size: 22px; 
+            font-weight: bold; 
+            color: #000; 
+            margin-top: 20px; 
+            margin-bottom: 20px; 
+        } 
+        
+        .content-container .footer-note { 
+             font-size: 16px; 
+             margin-top: 40px; 
+        } 
+
+    </style> 
+</head> 
+<body> 
+
+    <img src="E:\Work\Code\Dwam Projects\Ofuq\Ofoq_Backend\public\storage/certificate_bg.svg" class="background-image" style="width: 100%; height: 100%;"> 
+
+    <div class="content-container"> 
+
+        <h1>الشهادة</h1> 
+
+        <h2>أحمد محمد علي</h2> 
+
+        <p>قد حضر المقرر الدراسي</p> 
+
+        <h3 class="course-title">مقدمة في علوم الحاسوب</h3> 
+
+        <p> 
+            بواقع 40 ساعات تدريبية 
+            ضمن دبلومة دبلومة تكنولوجيا المعلومات وقد اجتاز الاختبار بنجاح 
+            <br> 
+            وهذه شهادة منا بذلك سائلين المولي عز وجل له دوام التوفيق والسداد 
+        </p> 
+
+        <p class="footer-note"> 
+            أكمل بتاريخ 15 ديسمبر 2024 
+        </p> 
+
+    </div> 
+
+</body> 
+</html>
