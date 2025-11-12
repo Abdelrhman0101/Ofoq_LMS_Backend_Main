@@ -43,7 +43,7 @@ class GenerateCertificateJob implements ShouldQueue
             Log::info('Data gathered', ['user' => $user->name, 'course' => $course->title]);
 
             // 2. Generate unique serial number
-            $serial = 'AFUQ-' . $course->id . '-' . $user->id . '-' . Str::random(8);
+            $serial = Str::upper(Str::random(7));
             Log::info('Serial generated', ['serial' => $serial]);
 
             // Get course hours (using hours_count field)
@@ -75,13 +75,36 @@ class GenerateCertificateJob implements ShouldQueue
                 'title_text' => 'شهادة',
             ];
 
+            // --- بداية الكود الجديد ---
+            // 1. تحديد مسار الصورة (زي ما إنت كتبته بالظبط)
+            $imagePath = public_path('storage/certifecate_cover.jpg');
+
+            // 2. قراءة الصورة وتحويلها لـ Base64
+            $imageData = base64_encode(file_get_contents($imagePath));
+
+            // 3. تجهيز الكود الكامل للـ CSS
+            $imageBase64 = 'data:image/jpeg;base64,' . $imageData;
+
+            // 4. إضافة الكود للمتغيرات اللي هتروح للـ View
+            $certificateData['backgroundImageBase64'] = $imageBase64;
+            // --- نهاية الكود الجديد ---
+
             Log::info('Certificate data prepared', $certificateData);
 
+            // 3. Generate PDF using Browsershot...
+            
+            Log::info('Certificate data prepared', $certificateData);
             // 3. Generate PDF using Browsershot instead of DomPDF
-            $fileName = 'certificates/course_' . $course->id . '_user_' . $user->id . '_' . Str::random(10) . '.pdf';
+
+            // [الخطوة الجديدة] تحويل اسم الطالب لاسم مناسب للملفات (slug)
+            $student_slug = Str::slug($user->name); 
+
+            // [السطر المعدل] إنشاء اسم ملف واضح وفريد (باسم الطالب + ID الكورس)
+            $fileName = 'certificates/' . $student_slug . '_course_' . $course->id . '_user_' . $user->id . '.pdf';
             $fullPath = storage_path('app/public/' . $fileName);
             
             Browsershot::html(view('certificates.course_certificate_simple', $certificateData)->render())
+                ->showBackground()    
                 ->landscape()
                 ->format('A4')
                 ->save($fullPath);
