@@ -53,7 +53,7 @@ class CourseController extends Controller
         Log::info('CourseController@store: Request received to create a new course.');
         
         // Debug logging
-        \Log::info('Course creation request received', [
+        Log::info('Course creation request received', [
             'request_data' => $request->all(),
             'files' => $request->allFiles(),
             'timestamp' => now()
@@ -61,7 +61,7 @@ class CourseController extends Controller
         
         try {
             $validated = $request->validated();
-            \Log::info('Validation passed', ['validated_data' => $validated]);
+            Log::info('Validation passed', ['validated_data' => $validated]);
 
             // Extract chapters data before creating course (allow raw JSON from FormData)
             $chaptersData = $request->input('chapters', []);
@@ -70,7 +70,7 @@ class CourseController extends Controller
                 if (json_last_error() === JSON_ERROR_NONE) {
                     $chaptersData = $decoded;
                 } else {
-                    \Log::warning('Invalid chapters JSON provided', ['chapters' => $chaptersData]);
+                    Log::warning('Invalid chapters JSON provided', ['chapters' => $chaptersData]);
                     $chaptersData = [];
                 }
             }
@@ -95,17 +95,17 @@ class CourseController extends Controller
                 $image = $request->file('cover_image');
                 $path = $image->store('courses/cover_images', 'public');
                 $validated['cover_image'] = $path;
-                \Log::info('Cover image stored', ['path' => $path]);
+Log::info('Cover image stored', ['path' => $path]);
             }
 
-            \Log::info('About to create course', ['data' => $validated]);
+            Log::info('About to create course', ['data' => $validated]);
             $course = Course::create($validated);
-            \Log::info('Course created successfully', ['course_id' => $course->id, 'course_title' => $course->title]);
+            Log::info('Course created successfully', ['course_id' => $course->id, 'course_title' => $course->title]);
 
             // Create chapters and lessons if provided
             if (!empty($chaptersData)) {
                 foreach ($chaptersData as $chapterData) {
-                    \Log::info('Creating chapter', ['chapter_data' => $chapterData]);
+                    Log::info('Creating chapter', ['chapter_data' => $chapterData]);
                     
                     // Extract lessons data before creating chapter
                     $lessonsData = $chapterData['lessons'] ?? [];
@@ -118,12 +118,12 @@ class CourseController extends Controller
                         'order' => $chapterData['order'] ?? 1,
                     ]);
                     
-                    \Log::info('Chapter created successfully', ['chapter_id' => $chapter->id, 'chapter_title' => $chapter->title]);
+                    Log::info('Chapter created successfully', ['chapter_id' => $chapter->id, 'chapter_title' => $chapter->title]);
                     
                     // Create lessons for this chapter if provided
                     if (!empty($lessonsData)) {
                         foreach ($lessonsData as $lessonData) {
-                            \Log::info('Creating lesson', ['lesson_data' => $lessonData]);
+                            Log::info('Creating lesson', ['lesson_data' => $lessonData]);
                             
                             $lesson = $chapter->lessons()->create([
                                 'title' => $lessonData['title'],
@@ -134,7 +134,7 @@ class CourseController extends Controller
                                 'is_visible' => $lessonData['is_visible'] ?? true,
                             ]);
                             
-                            \Log::info('Lesson created successfully', ['lesson_id' => $lesson->id, 'lesson_title' => $lesson->title]);
+                            Log::info('Lesson created successfully', ['lesson_id' => $lesson->id, 'lesson_title' => $lesson->title]);
                         }
                     }
                 }
@@ -150,7 +150,7 @@ class CourseController extends Controller
             ], 201);
             
         } catch (\Exception $e) {
-            \Log::error('Course creation failed', [
+            Log::error('Course creation failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
