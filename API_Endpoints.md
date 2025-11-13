@@ -477,3 +477,28 @@ The system comes with default users for testing:
   - Email: `student@ofoq.com`
   - Password: `student123`
   - Role: `student`
+
+## Public Endpoints
+
+### Lesson Status
+
+#### `GET /api/lessons/{lesson}/status`
+- Description: Check a specific lesson status for the authenticated user using a token.
+- Authorization: Public, requires Sanctum token via query or Bearer.
+- Query Parameters:
+  - `token` (string, optional if using Bearer): Sanctum personal access token.
+- Path Parameters:
+  - `lesson` (integer): Lesson ID.
+- Success Response (200):
+  ```json
+  {
+    "status": "completed | in_progress | not_enrolled",
+    "lesson_id": 123,
+    "course_id": 45,
+    "diploma_id": 7,
+    "user_id": 9
+  }
+  ```
+- Error Responses:
+  - `401` Missing token: `{ "message": "Missing token" }`
+  - `401` Invalid token: `{ "message": "Invalid token" }`

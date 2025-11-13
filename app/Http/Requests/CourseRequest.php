@@ -34,6 +34,7 @@ class CourseRequest extends FormRequest
             'is_published'       => 'boolean',
             'instructor_id'      => 'required|exists:instructors,id',
             'category_id'        => 'required|exists:category_of_course,id',
+            'rank'               => 'nullable|integer|min:1',
             'name_instructor'    => 'nullable|string|max:255',
             'bio_instructor'     => 'nullable|string|max:1000',
             'image_instructor'   => 'nullable|string|max:255',
@@ -87,6 +88,9 @@ class CourseRequest extends FormRequest
             'price.min' => 'Course price cannot be negative',
 
             'is_free.boolean' => 'Free status must be true or false',
+
+            'rank.integer' => 'Rank must be a number',
+            'rank.min' => 'Rank must be at least 1',
 
             'instructor_id.required' => 'Instructor ID is required',
             'instructor_id.exists' => 'Instructor ID must refer to an existing user',

@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\BlockedUserController; // added
 use App\Http\Controllers\UserCategoryEnrollmentController;
 use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\LessonProgressController;
 
 // Public stats routes
 Route::get('/stats/general', [StatsController::class, 'getGeneralStats']);
@@ -59,6 +60,9 @@ Route::get('/public/verify-certificate', [CertificateVerificationController::cla
 
 // Public reviews listing for a course
 Route::get('/courses/{courseId}/reviews', [ReviewController::class, 'index']);
+
+// Public: check lesson status by token and lesson id
+Route::get('/lessons/{lesson}/status', [LessonProgressController::class, 'status']);
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
@@ -232,7 +236,7 @@ Route::get('/course-certificate/verify/{token}', [CertificateController::class, 
 // Public diploma certificate verification (serve PDF or redirect to external URL)
 Route::get('/diploma-certificate/verify/{token}', function ($token) {
     $cert = \App\Models\DiplomaCertificate::where('verification_token', $token)
-        ->with(['user', 'category'])
+        ->with(['user', 'diploma'])
         ->first();
 
     if (!$cert) {
@@ -247,7 +251,7 @@ Route::get('/diploma-certificate/verify/{token}', function ($token) {
     // If file exists locally, stream it
     if (!empty($cert->file_path) && \Illuminate\Support\Facades\Storage::disk('public')->exists($cert->file_path)) {
         $path = \Illuminate\Support\Facades\Storage::disk('public')->path($cert->file_path);
-        $name = "Diploma_{$cert->category->name}_{$cert->user->name}.pdf";
+        $name = "Diploma_{$cert->diploma->name}_{$cert->user->name}.pdf";
         return response()->file($path, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $name . '"'
@@ -261,7 +265,7 @@ Route::get('/diploma-certificate/verify/{token}', function ($token) {
         'certificate' => [
             'id' => $cert->id,
             'user_name' => $cert->user->name,
-            'diploma_name' => $cert->category->name,
+            'diploma_name' => $cert->diploma->name,
             'issued_at' => optional($cert->issued_at)->format('F d, Y'),
             'completion_date' => $data['completion_date'] ?? null,
             'verification_token' => $cert->verification_token,

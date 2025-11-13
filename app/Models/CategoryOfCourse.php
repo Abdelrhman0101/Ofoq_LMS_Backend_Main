@@ -74,4 +74,9 @@ class CategoryOfCourse extends Model
         return $this->morphOne(\App\Models\Quiz::class, 'quizzable')
             ->where('is_final', true);
     }
+
+    public function certificates()
+    {
+        return $this->hasMany(DiplomaCertificate::class, 'diploma_id');
+    }
 }

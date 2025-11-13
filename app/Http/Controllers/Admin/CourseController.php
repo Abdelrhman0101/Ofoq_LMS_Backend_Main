@@ -23,11 +23,17 @@ class CourseController extends Controller
     {
         $perPage = (int) ($request->query('per_page', 10));
 
-        $courses = Course::withoutGlobalScope('published')->with([
+        $courses = Course::withoutGlobalScope('published')
+            ->with([
             'chapters.lessons.quiz',
             'reviews.user',
             'instructor',
-        ])->paginate($perPage);
+        ])
+            // Order by rank ascending, NULLs last, then by id
+            ->orderByRaw('`rank` IS NULL')
+            ->orderBy('rank')
+            ->orderBy('id')
+            ->paginate($perPage);
         $courses->loadCount(['chapters', 'lessons', 'reviews']);
         $courses->loadAvg('reviews', 'rating');
         return response()->json([

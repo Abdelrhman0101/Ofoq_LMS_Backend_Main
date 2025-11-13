@@ -97,4 +97,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\UserCategoryEnrollment::class);
     }
+
+    public function diplomaCertificates(): HasMany
+    {
+        return $this->hasMany(DiplomaCertificate::class);
+    }
 }

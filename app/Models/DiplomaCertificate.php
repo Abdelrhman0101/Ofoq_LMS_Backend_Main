@@ -12,7 +12,7 @@ class DiplomaCertificate extends Model
 
     protected $fillable = [
         'user_id',
-        'category_id',
+        'diploma_id', // Changed from category_id to diploma_id
         'user_category_enrollment_id',
         'verification_token',
         'serial_number',
@@ -20,11 +20,13 @@ class DiplomaCertificate extends Model
         'file_path',
         'certificate_data',
         'issued_at',
+        'status',
     ];
 
     protected $casts = [
         'issued_at' => 'datetime',
         'certificate_data' => 'array',
+        'status' => 'string',
     ];
 
     public function user(): BelongsTo
@@ -32,9 +34,9 @@ class DiplomaCertificate extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function category(): BelongsTo
+    public function diploma(): BelongsTo
     {
-        return $this->belongsTo(CategoryOfCourse::class, 'category_id');
+        return $this->belongsTo(CategoryOfCourse::class, 'diploma_id', 'id');
     }
 
     public function enrollment(): BelongsTo
@@ -49,6 +51,6 @@ class DiplomaCertificate extends Model
 
     public function getDownloadUrlAttribute(): string
     {
-        return url("/api/categories/{$this->category_id}/certificate");
+        return url("/api/diplomas/{$this->diploma_id}/certificate");
     }
 }

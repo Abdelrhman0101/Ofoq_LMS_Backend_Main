@@ -13,6 +13,7 @@ use App\Http\Controllers\LessonController; // use base LessonController for less
 use App\Http\Controllers\Admin\CategoryFinalExamController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\Admin\DiplomaCertificateController;
 
 // This file is already loaded with prefix `api/admin` and middleware `api`, `auth:sanctum`, `role:admin` via RouteServiceProvider.
 // Define routes relative to that prefix without re-wrapping groups.
@@ -47,3 +48,18 @@ Route::get('users/{user}/certificates', [CertificateController::class, 'userCert
 Route::get('certificates/search', [CertificateController::class, 'searchCertificatesAdmin']);
 // إصدار شهادة دبلومة (للأدمن فقط) بشرط إكمال جميع المقررات
 Route::post('categories/{category}/certificate', [CertificateController::class, 'issueDiplomaCertificate']);
+
+// Diploma Certificate Management Routes
+Route::prefix('diplomas/{diploma}')->group(function () {
+    // Get eligible students for a diploma
+    Route::get('eligible-students', [DiplomaCertificateController::class, 'getEligibleStudents']);
+    
+    // Check specific student eligibility
+    Route::post('check-eligibility', [DiplomaCertificateController::class, 'checkStudentEligibility']);
+    
+    // Issue certificates to all eligible students
+    Route::post('issue-certificates', [DiplomaCertificateController::class, 'issueCertificates']);
+    
+    // Get all certificates for a diploma
+    Route::get('certificates', [DiplomaCertificateController::class, 'getDiplomaCertificates']);
+});

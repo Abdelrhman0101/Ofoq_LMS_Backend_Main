@@ -129,7 +129,8 @@ class Course extends Model
         'students_count',
         'hours_count',
         'reviews_count',
-        'cover_image'
+        'cover_image',
+        'rank'
     ];
     protected $appends = ['cover_image_url'];
 

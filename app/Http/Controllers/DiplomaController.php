@@ -57,7 +57,11 @@ class DiplomaController extends Controller
                   ->withCount(['chapters', 'reviews'])
                   ->withAvg('reviews', 'rating')
                   ->with('instructor')
-                  ->with('category');
+                  ->with('category')
+                  // ترتيب المقررات حسب rank تصاعديًا مع وضع القيم NULL في النهاية
+                  ->orderByRaw('`rank` IS NULL')
+                  ->orderBy('rank')
+                  ->orderBy('id');
             }])
             ->first();
 
