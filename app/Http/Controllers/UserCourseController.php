@@ -8,6 +8,7 @@ use App\Http\Resources\CourseResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\BlockedUser;
 use Illuminate\Support\Facades\Schema;
 use App\Models\UserQuizAttempt;
@@ -20,6 +21,10 @@ class UserCourseController extends Controller
     public function myEnrollments(Request $request)
     {
         $user = Auth::user();
+        // Allow client to specify per_page up to a safe maximum (100)
+        $perPage = (int) $request->query('per_page', 12);
+        if ($perPage < 1) { $perPage = 12; }
+        if ($perPage > 100) { $perPage = 100; }
 
         $courses = UserCourse::query()
             ->where('user_id', $user->id)
@@ -30,7 +35,7 @@ class UserCourseController extends Controller
                     ->withCount(['chapters', 'lessons', 'reviews'])
                     ->withAvg('reviews', 'rating');
             }])
-            ->paginate(12);
+            ->paginate($perPage);
 
         return CourseResource::collection($courses->pluck('course'))
             ->additional([
@@ -226,8 +231,8 @@ class UserCourseController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in studentCoursesStatus: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error in studentCoursesStatus: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json(['error' => 'Internal server error'], 500);
         }
     }
