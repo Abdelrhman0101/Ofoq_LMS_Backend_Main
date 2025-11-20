@@ -24,9 +24,10 @@ use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\Admin\InstructorController as AdminInstructorController;
 use App\Http\Controllers\Admin\FeaturedCourseController as AdminFeaturedCourseController;
 use App\Http\Controllers\LessonNoteController;
-use App\Http\Controllers\Admin\BlockedUserController; // added
+use App\Http\Controllers\Admin\BlockedUserController;
 use App\Http\Controllers\UserCategoryEnrollmentController;
 use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\LessonProgressController;
 
@@ -149,6 +150,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Admin Stats
         Route::get('/stats/students', [StatsController::class, 'getStudentStats']);
+
+        // Database Backups Management
+        Route::get('/backups', [BackupController::class, 'index']);
+        Route::post('/backups/create', [BackupController::class, 'create']);
+        Route::post('/backups/upload', [BackupController::class, 'upload']);
+        Route::post('/backups/restore', [BackupController::class, 'restore']);
+        Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');
+        Route::delete('/backups/{filename}', [BackupController::class, 'delete'])->where('filename', '.*');
     });
 
     // User/Student routes (accessible to authenticated users)

@@ -61,6 +61,12 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // Backup dump configuration (for spatie/laravel-backup)
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_PATH', ''), // Path to mysqldump on Windows (Laragon)
+                'use_single_transaction' => true,
+                'timeout' => 60 * 5, // 5 minutes
+            ],
         ],
 
         'mariadb' => [

@@ -28,7 +28,10 @@ return [
         'X-XSRF-TOKEN',
     ],
 
-    'exposed_headers' => [],
+    'exposed_headers' => [
+        'Content-Disposition',
+        'Content-Length',
+    ],
 
     'max_age' => 0,
 
