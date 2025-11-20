@@ -257,22 +257,27 @@ class BackupController extends Controller
                     $zip->extractTo($tempDisk->path('temp'));
                     $zip->close();
 
-                    // Restore database
-                    $database = env('DB_DATABASE');
-                    $username = env('DB_USERNAME');
-                    $password = env('DB_PASSWORD');
-                    $host = env('DB_HOST');
+                    // Restore database - read from configured connection to avoid env() issues when config is cached
+                    $connection = config('database.default', 'mysql');
+                    $dbConfig = (array) config("database.connections.$connection", []);
+                    $database = $dbConfig['database'] ?? env('DB_DATABASE');
+                    $username = $dbConfig['username'] ?? env('DB_USERNAME');
+                    $password = $dbConfig['password'] ?? env('DB_PASSWORD');
+                    $host = $dbConfig['host'] ?? env('DB_HOST');
+                    $port = (string) ($dbConfig['port'] ?? env('DB_PORT', '3306'));
+                    $charset = $dbConfig['charset'] ?? 'utf8mb4';
+
                     $dumpPath = $tempDisk->path('temp/' . $dbDumpFile);
                     // Build mysql command (capture stderr with 2>&1 for diagnostics)
-                    $port = env('DB_PORT', '3306');
                     $mysql = escapeshellcmd($this->mysqlBinary());
-                    // Prefer long options with equals for better Windows compatibility
+                    // Prefer long options with equals for better Windows/Linux compatibility
+                    // Note: use --password=<value> to ensure mysql does not prompt (avoid space after -p)
                     $command = $mysql
                         . ' --host=' . escapeshellarg($host)
                         . ' --port=' . escapeshellarg($port)
                         . ' --user=' . escapeshellarg($username)
                         . ' --password=' . escapeshellarg($password)
-                        . ' --default-character-set=utf8mb4 '
+                        . ' --default-character-set=' . escapeshellarg($charset) . ' '
                         . escapeshellarg($database)
                         . ' < ' . escapeshellarg($dumpPath)
                         . ' 2>&1';
@@ -294,6 +299,8 @@ class BackupController extends Controller
                             'success' => false,
                             'message' => 'Database restore failed',
                             'error_output' => implode("\n", $output ?? []),
+                            // Helpful hint without exposing credentials
+                            'password_provided' => !empty($password),
                         ], 500);
                     }
                 }
