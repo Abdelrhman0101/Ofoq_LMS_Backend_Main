@@ -86,19 +86,18 @@ class GenerateCertificateJob implements ShouldQueue
                 'title_text' => 'شهادة',
             ];
 
-            // --- بداية الكود الجديد ---
-            // 1. تحديد مسار الصورة (زي ما إنت كتبته بالظبط)
+            // --- بداية الكود الخاص بصورة الخلفية ---
+            // 1. تحديد مسار الصورة
             $imagePath = public_path('storage/certifecate_cover.jpg');
 
-            // 2. قراءة الصورة وتحويلها لـ Base64
-            $imageData = base64_encode(file_get_contents($imagePath));
-
-            // 3. تجهيز الكود الكامل للـ CSS
-            $imageBase64 = 'data:image/jpeg;base64,' . $imageData;
-
-            // 4. إضافة الكود للمتغيرات اللي هتروح للـ View
-            $certificateData['backgroundImageBase64'] = $imageBase64;
-            // --- نهاية الكود الجديد ---
+            // 2. قراءة الصورة وتحويلها لـ Base64 بشكل آمن (تخطي عند عدم توفرها)
+            if (is_readable($imagePath)) {
+                $imageData = base64_encode(file_get_contents($imagePath));
+                $certificateData['backgroundImageBase64'] = 'data:image/jpeg;base64,' . $imageData;
+            } else {
+                Log::warning('Certificate background image missing or unreadable', ['path' => $imagePath]);
+            }
+            // --- نهاية الكود الخاص بصورة الخلفية ---
 
             Log::info('Certificate data prepared', $certificateData);
 
@@ -113,6 +112,11 @@ class GenerateCertificateJob implements ShouldQueue
             // [السطر المعدل] إنشاء اسم ملف واضح وفريد (باسم الطالب + ID الكورس)
             $fileName = 'certificates/' . $student_slug . '_course_' . $course->id . '_user_' . $user->id . '.pdf';
             $fullPath = storage_path('app/public/' . $fileName);
+
+            // تأكيد وجود مجلد الحفظ داخل قرص public قبل توليد الملف
+            if (!Storage::disk('public')->exists('certificates')) {
+                Storage::disk('public')->makeDirectory('certificates');
+            }
             
             Browsershot::html(view('certificates.course_certificate_simple', $certificateData)->render())
                 ->showBackground()    
