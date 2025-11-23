@@ -127,11 +127,14 @@ class GenerateCertificateJob implements ShouldQueue
             Log::info('PDF generated successfully', ['file_name' => $fileName, 'path' => $fullPath]);
 
             // 4. Update the record in database (most important)
+            $token = Str::uuid();
+            $certificateData['verification_token'] = (string) $token;
             $this->certificate->update([
                 'status' => 'completed',
                 'file_path' => $fileName,
                 'serial_number' => $serial,
-                'verification_token' => Str::uuid(),
+                'verification_token' => $token,
+                'certificate_data' => $certificateData,
             ]);
 
             Log::info('Certificate generated successfully', [

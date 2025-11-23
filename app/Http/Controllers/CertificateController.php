@@ -1163,6 +1163,7 @@ class CertificateController extends Controller
             'course_id' => $certificate->course_id,
             'status' => $certificate->status,
             'file_path' => $certificate->file_path,
+            'file_url' => $this->filePathToUrl($certificate->file_path),
             'serial_number' => $certificate->serial_number,
             'certificate_data' => $certificate->certificate_data,
             'created_at' => $certificate->created_at->toIso8601String(),
