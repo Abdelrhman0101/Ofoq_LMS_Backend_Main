@@ -78,17 +78,19 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
             ];
 
             // --- بداية الكود الجديد ---
-            // 1. تحديد مسار الصورة (زي ما إنت كتبته بالظبط)
+            // 1. تحديد مسار الصورة
             $imagePath = public_path('storage/certifecate_cover.jpg');
 
-            // 2. قراءة الصورة وتحويلها لـ Base64
-            $imageData = base64_encode(file_get_contents($imagePath));
-
-            // 3. تجهيز الكود الكامل للـ CSS
-            $imageBase64 = 'data:image/jpeg;base64,' . $imageData;
-
-            // 4. إضافة الكود للمتغيرات اللي هتروح للـ View
-            $certificateData['backgroundImageBase64'] = $imageBase64;
+            // 2. قراءة الصورة وتحويلها لـ Base64 بشكل آمن (تخطي عند عدم توفرها)
+            if (is_readable($imagePath)) {
+                $imageData = base64_encode(file_get_contents($imagePath));
+                // 3. تجهيز الكود الكامل للـ CSS
+                $imageBase64 = 'data:image/jpeg;base64,' . $imageData;
+                // 4. إضافة الكود للمتغيرات اللي هتروح للـ View
+                $certificateData['backgroundImageBase64'] = $imageBase64;
+            } else {
+                Log::warning('Diploma certificate background image missing or unreadable', ['path' => $imagePath]);
+            }
             // --- نهاية الكود الجديد ---
 
             Log::info('Certificate data prepared', $certificateData);
@@ -104,12 +106,33 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
             // [السطر المعدل] إنشاء اسم ملف واضح وفريد (باسم الطالب + ID الدبلومة)
             $fileName = 'certificates/diploma_' . Str::slug($diploma->name) . '_user_' . $user->id . '.pdf';
             $fullPath = storage_path('app/public/' . $fileName);
-            
-            Browsershot::html(view('certificates.diploma_certificate', $certificateData)->render())
-                ->showBackground()    
+
+            // تأكيد وجود مجلد الحفظ داخل قرص public قبل توليد الملف
+            if (!Storage::disk('public')->exists('certificates')) {
+                Storage::disk('public')->makeDirectory('certificates');
+            }
+
+            $browsershot = Browsershot::html(view('certificates.diploma_certificate', $certificateData)->render())
+                ->showBackground()
                 ->landscape()
-                ->format('A4')
-                ->save($fullPath);
+                ->format('A4');
+
+            // Configure Browsershot from environment if provided
+            $nodePath = env('BROWSERSHOT_NODE_PATH');
+            $chromePath = env('BROWSERSHOT_CHROME_PATH');
+            $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true);
+
+            if (!empty($nodePath)) {
+                $browsershot->setNodeBinary($nodePath);
+            }
+            if (!empty($chromePath)) {
+                $browsershot->setChromePath($chromePath);
+            }
+            if ($noSandbox) {
+                $browsershot->noSandbox();
+            }
+
+            $browsershot->save($fullPath);
             
             Log::info('PDF generated successfully', ['file_name' => $fileName, 'path' => $fullPath]);
 

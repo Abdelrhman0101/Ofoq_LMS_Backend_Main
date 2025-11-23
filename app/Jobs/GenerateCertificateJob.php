@@ -118,11 +118,27 @@ class GenerateCertificateJob implements ShouldQueue
                 Storage::disk('public')->makeDirectory('certificates');
             }
             
-            Browsershot::html(view('certificates.course_certificate_simple', $certificateData)->render())
-                ->showBackground()    
+            $browsershot = Browsershot::html(view('certificates.course_certificate_simple', $certificateData)->render())
+                ->showBackground()
                 ->landscape()
-                ->format('A4')
-                ->save($fullPath);
+                ->format('A4');
+
+            // Configure Browsershot from environment if provided
+            $nodePath = env('BROWSERSHOT_NODE_PATH');
+            $chromePath = env('BROWSERSHOT_CHROME_PATH');
+            $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true);
+
+            if (!empty($nodePath)) {
+                $browsershot->setNodeBinary($nodePath);
+            }
+            if (!empty($chromePath)) {
+                $browsershot->setChromePath($chromePath);
+            }
+            if ($noSandbox) {
+                $browsershot->noSandbox();
+            }
+
+            $browsershot->save($fullPath);
             
             Log::info('PDF generated successfully', ['file_name' => $fileName, 'path' => $fullPath]);
 
