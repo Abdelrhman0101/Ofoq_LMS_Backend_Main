@@ -86,18 +86,21 @@ class GenerateCertificateJob implements ShouldQueue
                 'title_text' => 'شهادة',
             ];
 
-            // --- بداية الكود الخاص بصورة الخلفية ---
-            // 1. تحديد مسار الصورة
+            // --- بداية التعديل المصحح ---
+            // 1. وضع قيمة افتراضية للمتغير لتجنب خطأ Undefined Variable في حالة عدم وجود الصورة
+            $certificateData['backgroundImageBase64'] = '';
+
+            // 2. تحديد مسار الصورة (بالاسم الذي أكدته)
             $imagePath = public_path('storage/certifecate_cover.jpg');
 
-            // 2. قراءة الصورة وتحويلها لـ Base64 بشكل آمن (تخطي عند عدم توفرها)
-            if (is_readable($imagePath)) {
+            // 3. التحقق والقراءة
+            if (file_exists($imagePath) && is_readable($imagePath)) {
                 $imageData = base64_encode(file_get_contents($imagePath));
                 $certificateData['backgroundImageBase64'] = 'data:image/jpeg;base64,' . $imageData;
             } else {
                 Log::warning('Certificate background image missing or unreadable', ['path' => $imagePath]);
             }
-            // --- نهاية الكود الخاص بصورة الخلفية ---
+            // --- نهاية التعديل ---
 
             Log::info('Certificate data prepared', $certificateData);
 
