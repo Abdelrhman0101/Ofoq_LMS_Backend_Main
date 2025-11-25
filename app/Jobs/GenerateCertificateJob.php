@@ -133,19 +133,25 @@ class GenerateCertificateJob implements ShouldQueue
                 ->landscape()
                 ->format('A4');
 
-            // Configure Browsershot from environment (Windows-friendly)
+            // Configure Browsershot from environment (With Safety Checks)
             $nodePath = env('BROWSERSHOT_NODE_PATH');
             $chromePath = env('BROWSERSHOT_CHROME_PATH');
             $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true);
 
-            if (!empty($nodePath)) {
+            // Only apply paths if they actually exist on the current machine
+            if (!empty($nodePath) && file_exists($nodePath)) {
                 $browsershot->setNodeBinary($nodePath);
             }
-            if (!empty($chromePath)) {
+            if (!empty($chromePath) && file_exists($chromePath)) {
                 $browsershot->setChromePath($chromePath);
             }
             if ($noSandbox) {
                 $browsershot->noSandbox();
+                // Add Linux-friendly chromium args to avoid sandbox and shared memory issues
+                $browsershot->addChromiumArguments([
+                    'disable-setuid-sandbox',
+                    'disable-dev-shm-usage',
+                ]);
             }
 
             $browsershot->save($fullPath);
