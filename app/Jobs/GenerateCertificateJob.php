@@ -133,10 +133,16 @@ class GenerateCertificateJob implements ShouldQueue
                 ->landscape()
                 ->format('A4');
 
-            // Configure Browsershot from environment (With Safety Checks)
-            $nodePath = env('BROWSERSHOT_NODE_PATH');
-            $chromePath = env('BROWSERSHOT_CHROME_PATH');
-            $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true);
+            // Configure Browsershot from environment (OS-aware + Safety Checks)
+            $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+            $nodeKey = $isWindows ? 'BROWSERSHOT_NODE_PATH_WINDOWS' : 'BROWSERSHOT_NODE_PATH_LINUX';
+            $chromeKey = $isWindows ? 'BROWSERSHOT_CHROME_PATH_WINDOWS' : 'BROWSERSHOT_CHROME_PATH_LINUX';
+
+            // Prefer OS-specific keys, fallback to generic keys
+            $nodePath = env($nodeKey, env('BROWSERSHOT_NODE_PATH'));
+            $chromePath = env($chromeKey, env('BROWSERSHOT_CHROME_PATH'));
+            $noSandboxDefault = $isWindows ? false : true;
+            $noSandbox = env('BROWSERSHOT_NO_SANDBOX', $noSandboxDefault);
 
             // Only apply paths if they actually exist on the current machine
             if (!empty($nodePath) && file_exists($nodePath)) {
