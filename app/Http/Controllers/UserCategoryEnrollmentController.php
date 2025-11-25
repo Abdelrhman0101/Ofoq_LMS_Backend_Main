@@ -6,6 +6,9 @@ use App\Models\CategoryOfCourse;
 use App\Models\UserCategoryEnrollment;
 use App\Models\UserCourse;
 use App\Http\Resources\CategoryResource;
+use App\Models\DiplomaCertificate;
+use App\Services\DiplomaEligibilityService;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -107,12 +110,47 @@ class UserCategoryEnrollmentController extends Controller
             }])
             ->get();
 
-        $data = $enrollments->map(function ($enrollment) {
+        $userId = $user->id;
+        $eligibilityService = new DiplomaEligibilityService();
+        $data = $enrollments->map(function ($enrollment) use ($userId, $eligibilityService, $user) {
+            $certificate = DiplomaCertificate::where('user_id', $userId)
+                ->where('diploma_id', $enrollment->category_id)
+                ->orderByDesc('created_at')
+                ->first();
+
+            // Normalize file URL to a FULL absolute URL when possible
+            $fileUrl = null;
+            if ($certificate && !empty($certificate->file_path)) {
+                if (Storage::disk('public')->exists($certificate->file_path)) {
+                    // Storage::url returns a relative path like /storage/... -> wrap with url() to make it absolute
+                    $fileUrl = url(Storage::url($certificate->file_path));
+                } elseif (preg_match('/^https?:\/\//i', $certificate->file_path)) {
+                    $fileUrl = $certificate->file_path;
+                }
+            }
+
+            // Compute progress (0-100) using eligibility service
+            $progress = 0.0;
+            if ($enrollment->category) {
+                $progress = $eligibilityService->calculateCompletionPercentage($user, $enrollment->category);
+            }
+
             return [
                 'id' => $enrollment->id,
                 'status' => $enrollment->status,
                 'enrolled_at' => $enrollment->created_at,
                 'category' => new CategoryResource($enrollment->category),
+                // Always include certificate object if exists, with full file_url when resolvable
+                'certificate' => $certificate ? [
+                    'id' => $certificate->id,
+                    'status' => $certificate->status,
+                    'serial_number' => $certificate->serial_number,
+                    'file_url' => $fileUrl,
+                ] : null,
+                // Frontend flags based on agreed conditions
+                'progress' => $progress,
+                'can_download_certificate' => ($progress == 100.0) && ($certificate !== null) && ($certificate->status === 'completed'),
+                'is_eligible_for_certificate' => ($progress == 100.0) && ($certificate === null),
             ];
         });
 

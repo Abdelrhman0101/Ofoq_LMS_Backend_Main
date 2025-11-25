@@ -42,18 +42,25 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
 
             Log::info('Data gathered', ['user' => $user->name, 'diploma' => $diploma->name]);
 
-            // 2. Generate unique serial number (7 digits only)
-            // توليد رقم تسلسلي فريد (7 أرقام فقط)
-            $serial = null;
-            do {
-                // 1. توليد رقم عشوائي بين 0 و 9999999
-                $random = mt_rand(0, 9999999);
+            // 2. Reuse existing serial number from record; fallback generate only if missing
+            $serial = $this->diplomaCertificate->serial_number;
+            if (empty($serial)) {
+                Log::warning('Diploma serial_number missing on record; generating fallback serial');
+                do {
+                    $random = mt_rand(0, 9999999);
+                    $serial = str_pad($random, 7, '0', STR_PAD_LEFT);
+                } while (DiplomaCertificate::where('serial_number', $serial)->exists());
+                // Persist fallback to avoid mismatch
+                $this->diplomaCertificate->serial_number = $serial;
+            }
 
-                // 2. تحويله لنص وإضافة أصفار على اليسار لضمان طول 7 خانات (مثلاً: 0054321)
-                $serial = str_pad($random, 7, '0', STR_PAD_LEFT);
-
-                // 3. التأكد من أنه غير مستخدم من قبل (Loop until unique)
-            } while (DiplomaCertificate::where('serial_number', $serial)->exists());
+            // 2.a Ensure verification token exists before rendering PDF
+            $token = $this->diplomaCertificate->verification_token;
+            if (empty($token)) {
+                $token = (string) Str::uuid();
+                $this->diplomaCertificate->verification_token = $token;
+            }
+            $this->diplomaCertificate->save();
             
             Log::info('Serial generated', ['serial' => $serial]);
 
@@ -68,7 +75,7 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
                 'completion_date' => $this->diplomaCertificate->updated_at->format('j F Y'),
                 'total_courses' => $coursesText,
                 'serial_number' => $serial,
-                'verification_token' => $this->diplomaCertificate->verification_token,
+                'verification_token' => $token,
                 'issued_date' => now()->format('F d, Y'),
                 'h1_text' => 'شهادة إتمام دبلومة مهنية',
                 'p1_text' => 'تشهد منصة أفق أن الطالب',
@@ -103,13 +110,13 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
             // [الخطوة الجديدة] تحويل اسم الطالب لاسم مناسب للملفات (slug)
             $student_slug = Str::slug($user->name); 
 
-            // [السطر المعدل] إنشاء اسم ملف واضح وفريد (باسم الطالب + ID الدبلومة)
-            $fileName = 'certificates/diploma_' . Str::slug($diploma->name) . '_user_' . $user->id . '.pdf';
+            // توحيد المسار تحت certificates/diplomas باستخدام الرقم التسلسلي
+            $fileName = 'certificates/diplomas/' . $serial . '.pdf';
             $fullPath = storage_path('app/public/' . $fileName);
 
             // تأكيد وجود مجلد الحفظ داخل قرص public قبل توليد الملف
-            if (!Storage::disk('public')->exists('certificates')) {
-                Storage::disk('public')->makeDirectory('certificates');
+            if (!Storage::disk('public')->exists('certificates/diplomas')) {
+                Storage::disk('public')->makeDirectory('certificates/diplomas');
             }
 
             $browsershot = Browsershot::html(view('certificates.diploma_certificate', $certificateData)->render())
@@ -117,7 +124,7 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
                 ->landscape()
                 ->format('A4');
 
-            // Configure Browsershot from environment if provided
+            // Configure Browsershot from environment
             $nodePath = env('BROWSERSHOT_NODE_PATH');
             $chromePath = env('BROWSERSHOT_CHROME_PATH');
             $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true);
@@ -136,12 +143,12 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
             
             Log::info('PDF generated successfully', ['file_name' => $fileName, 'path' => $fullPath]);
 
-            // 4. Update the record in database (most important)
+            // 4. Update the record in database (keep serial and token consistent with PDF)
             $this->diplomaCertificate->update([
                 'status' => 'completed',
                 'file_path' => $fileName,
                 'serial_number' => $serial,
-                'verification_token' => Str::uuid(),
+                'verification_token' => $token,
             ]);
 
             Log::info('Diploma Certificate generated successfully', [

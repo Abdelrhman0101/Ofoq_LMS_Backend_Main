@@ -62,4 +62,10 @@ Route::prefix('diplomas/{diploma}')->group(function () {
     
     // Get all certificates for a diploma
     Route::get('certificates', [DiplomaCertificateController::class, 'getDiplomaCertificates']);
+
+    // List enrolled students with progress and certificate status (Admin)
+    Route::get('students', [DiplomaCertificateController::class, 'listEnrolledStudents']);
+
+    // Generate certificate for a specific student (Admin)
+    Route::post('students/{student}/generate-certificate', [DiplomaCertificateController::class, 'generateForStudentById']);
 });

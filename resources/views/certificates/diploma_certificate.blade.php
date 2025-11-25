@@ -22,7 +22,8 @@
             padding: 0;
             width: 1123px; /* A4 Landscape */
             height: 792px;
-            background-image: url("{{ $backgroundImageBase64 }}");
+            /* استخدم خلفية بيضاء افتراضياً إذا لم تتوفر صورة الغلاف */
+            background-image: url("{{ $backgroundImageBase64 ?? '' }}");
             background-size: 100% 100%;
             background-repeat: no-repeat;
             color: #0f172a;

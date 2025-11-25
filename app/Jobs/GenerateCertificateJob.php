@@ -42,18 +42,25 @@ class GenerateCertificateJob implements ShouldQueue
 
             Log::info('Data gathered', ['user' => $user->name, 'course' => $course->title]);
 
-            // 2. Generate unique serial number (7 digits only)
-            // توليد رقم تسلسلي فريد (7 أرقام فقط)
-            $serial = null;
-            do {
-                // 1. توليد رقم عشوائي بين 0 و 9999999
-                $random = mt_rand(0, 9999999);
+            // 2. Generate or reuse unique serial number (7 digits only)
+            $serial = $this->certificate->serial_number;
+            if (empty($serial)) {
+                do {
+                    $random = mt_rand(0, 9999999);
+                    $serial = str_pad($random, 7, '0', STR_PAD_LEFT);
+                } while (CourseCertificate::where('serial_number', $serial)->exists());
+                // Persist serial early to keep DB and PDF consistent
+                $this->certificate->serial_number = $serial;
+            }
 
-                // 2. تحويله لنص وإضافة أصفار على اليسار لضمان طول 7 خانات (مثلاً: 0054321)
-                $serial = str_pad($random, 7, '0', STR_PAD_LEFT);
-
-                // 3. التأكد من أنه غير مستخدم من قبل (Loop until unique)
-            } while (CourseCertificate::where('serial_number', $serial)->exists());
+            // 2.a Ensure a stable verification token exists before generating PDF
+            $token = $this->certificate->verification_token;
+            if (empty($token)) {
+                $token = (string) Str::uuid();
+                $this->certificate->verification_token = $token;
+            }
+            // Save early so QR/verification in PDF matches DB
+            $this->certificate->save();
             
             Log::info('Serial generated', ['serial' => $serial]);
 
@@ -75,7 +82,7 @@ class GenerateCertificateJob implements ShouldQueue
                 'course_hours' => $course_hours . ' ساعات تدريبية',
                 'diploma_name' => $diploma_name ?? 'دبلومة عامة',
                 'serial_number' => $serial,
-                'verification_token' => $this->certificate->verification_token,
+                'verification_token' => $token,
                 'issued_date' => now()->format('F d, Y'),
                 'h1_text' => 'شهادة إتمام الدورة التدريبية',
                 'p1_text' => 'قد حضر المقرر الدراسي',
@@ -112,13 +119,13 @@ class GenerateCertificateJob implements ShouldQueue
             // [الخطوة الجديدة] تحويل اسم الطالب لاسم مناسب للملفات (slug)
             $student_slug = Str::slug($user->name); 
 
-            // [السطر المعدل] إنشاء اسم ملف واضح وفريد (باسم الطالب + ID الكورس)
-            $fileName = 'certificates/' . $student_slug . '_course_' . $course->id . '_user_' . $user->id . '.pdf';
+            // توحيد المسار تحت certificates/courses باستخدام الرقم التسلسلي
+            $fileName = 'certificates/courses/' . $serial . '.pdf';
             $fullPath = storage_path('app/public/' . $fileName);
 
             // تأكيد وجود مجلد الحفظ داخل قرص public قبل توليد الملف
-            if (!Storage::disk('public')->exists('certificates')) {
-                Storage::disk('public')->makeDirectory('certificates');
+            if (!Storage::disk('public')->exists('certificates/courses')) {
+                Storage::disk('public')->makeDirectory('certificates/courses');
             }
             
             $browsershot = Browsershot::html(view('certificates.course_certificate_simple', $certificateData)->render())
@@ -126,27 +133,26 @@ class GenerateCertificateJob implements ShouldQueue
                 ->landscape()
                 ->format('A4');
 
-            // Configure Browsershot 
-            // التعديل: استخدام معامل الدمج (??) أو ?: لوضع مسار احتياطي 
-            $nodePath = env('BROWSERSHOT_NODE_PATH') ?: '/usr/bin/node'; 
-            $chromePath = env('BROWSERSHOT_CHROME_PATH') ?: '/usr/bin/google-chrome'; 
-            $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true); 
+            // Configure Browsershot from environment (Windows-friendly)
+            $nodePath = env('BROWSERSHOT_NODE_PATH');
+            $chromePath = env('BROWSERSHOT_CHROME_PATH');
+            $noSandbox = env('BROWSERSHOT_NO_SANDBOX', true);
 
-            // تأكدنا من المسارات 
-            $browsershot->setNodeBinary($nodePath); 
-            $browsershot->setChromePath($chromePath); 
-            
-            if ($noSandbox) { 
-                $browsershot->setOption('args', ['--no-sandbox', '--disable-setuid-sandbox']); 
+            if (!empty($nodePath)) {
+                $browsershot->setNodeBinary($nodePath);
+            }
+            if (!empty($chromePath)) {
+                $browsershot->setChromePath($chromePath);
+            }
+            if ($noSandbox) {
+                $browsershot->noSandbox();
             }
 
             $browsershot->save($fullPath);
             
             Log::info('PDF generated successfully', ['file_name' => $fileName, 'path' => $fullPath]);
 
-            // 4. Update the record in database (most important)
-            $token = Str::uuid();
-            $certificateData['verification_token'] = (string) $token;
+            // 4. Update the record in database (must match PDF values)
             $this->certificate->update([
                 'status' => 'completed',
                 'file_path' => $fileName,

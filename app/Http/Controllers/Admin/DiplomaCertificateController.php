@@ -9,6 +9,10 @@ use App\Services\DiplomaEligibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use App\Models\UserCategoryEnrollment;
+use App\Models\UserCourse;
 
 class DiplomaCertificateController extends Controller
 {
@@ -17,6 +21,222 @@ class DiplomaCertificateController extends Controller
     public function __construct(DiplomaEligibilityService $eligibilityService)
     {
         $this->eligibilityService = $eligibilityService;
+    }
+
+    /**
+     * Search for a student by id or email and list enrolled diplomas
+     * with completion percentage, certificate status, and action logic.
+     */
+    public function searchStudentDiplomas(Request $request): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'sometimes|integer|exists:users,id',
+            'email' => 'sometimes|email'
+        ]);
+
+        // Resolve user by id or email
+        $user = null;
+        if ($request->filled('user_id')) {
+            $user = User::find($request->user_id);
+        } elseif ($request->filled('email')) {
+            $user = User::where('email', $request->email)->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
+
+        // Get all diploma enrollments
+        $enrollments = UserCategoryEnrollment::where('user_id', $user->id)
+            ->with('category')
+            ->get();
+
+        $diplomas = $enrollments->map(function ($enrollment) use ($user) {
+            /** @var \App\Models\CategoryOfCourse $diploma */
+            $diploma = $enrollment->category;
+            $totalCourses = $diploma->courses()->count();
+
+            // Compute completion percentage
+            $completedCourses = UserCourse::where('user_id', $user->id)
+                ->whereHas('course', function ($q) use ($diploma) {
+                    $q->where('category_id', $diploma->id);
+                })
+                ->where('status', 'completed')
+                ->where('final_exam_score', '>=', 60)
+                ->count();
+            $percentage = $totalCourses > 0 ? round(($completedCourses / $totalCourses) * 100, 2) : 0.0;
+
+            // Check existing certificate
+            $certificate = DiplomaCertificate::where('user_id', $user->id)
+                ->where('diploma_id', $diploma->id)
+                ->orderByDesc('created_at')
+                ->first();
+
+            $fileUrl = null;
+            if ($certificate && !empty($certificate->file_path) && Storage::disk('public')->exists($certificate->file_path)) {
+                $fileUrl = Storage::url($certificate->file_path);
+            } elseif ($certificate && !empty($certificate->file_path) && preg_match('/^https?:\/\//i', $certificate->file_path)) {
+                $fileUrl = $certificate->file_path;
+            }
+
+            // Determine action
+            $action = [
+                'type' => 'locked',
+                'label' => 'غير متاح',
+            ];
+
+            if ($percentage < 100) {
+                $action = ['type' => 'locked', 'label' => 'غير متاح'];
+            } elseif ($percentage == 100 && !$certificate) {
+                $action = ['type' => 'generate', 'label' => 'توليد الشهادة'];
+            } elseif ($certificate) {
+                if ($certificate->status === 'completed' && $fileUrl) {
+                    $action = ['type' => 'download', 'label' => 'تحميل', 'url' => $fileUrl];
+                } else {
+                    $action = ['type' => 'processing', 'label' => 'قيد المعالجة'];
+                }
+            }
+
+            return [
+                'diploma' => [
+                    'id' => $diploma->id,
+                    'name' => $diploma->name,
+                    'total_courses' => $totalCourses,
+                ],
+                'completion_percentage' => $percentage,
+                'certificate' => $certificate ? [
+                    'id' => $certificate->id,
+                    'status' => $certificate->status,
+                    'serial_number' => $certificate->serial_number,
+                    'file_path' => $certificate->file_path,
+                    'file_url' => $fileUrl,
+                ] : null,
+                'action' => $action,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'student' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'diplomas' => $diplomas,
+            ],
+        ]);
+    }
+
+    /**
+     * Manually generate a diploma certificate for a student (admin trigger)
+     * Validates 100% completion, creates record, dispatches job.
+     */
+    public function generateForStudent(Request $request, CategoryOfCourse $diploma): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'sometimes|integer|exists:users,id',
+            'email' => 'sometimes|email'
+        ]);
+
+        // Resolve user by id or email
+        $user = null;
+        if ($request->filled('user_id')) {
+            $user = User::find($request->user_id);
+        } elseif ($request->filled('email')) {
+            $user = User::where('email', $request->email)->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
+
+        // Verify enrollment exists
+        $enrollment = UserCategoryEnrollment::where('user_id', $user->id)
+            ->where('category_id', $diploma->id)
+            ->first();
+        if (!$enrollment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير مسجل في هذه الدبلومة'
+            ], 403);
+        }
+
+        // Backend validation: 100% completion
+        $percentage = $this->eligibilityService->calculateCompletionPercentage($user, $diploma);
+        if ($percentage < 100.0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن التوليد: نسبة الإنجاز أقل من 100%'
+            ], 403);
+        }
+
+        // Check existing certificate
+        $existing = DiplomaCertificate::where('user_id', $user->id)
+            ->where('diploma_id', $diploma->id)
+            ->where('status', '!=', 'revoked')
+            ->first();
+        if ($existing) {
+            $fileUrl = null;
+            if (!empty($existing->file_path) && Storage::disk('public')->exists($existing->file_path)) {
+                $fileUrl = Storage::url($existing->file_path);
+            } elseif (!empty($existing->file_path) && preg_match('/^https?:\/\//i', $existing->file_path)) {
+                $fileUrl = $existing->file_path;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $existing->status === 'completed' ? 'تم إصدار الشهادة مسبقًا' : 'الشهادة قيد المعالجة',
+                'certificate' => [
+                    'id' => $existing->id,
+                    'status' => $existing->status,
+                    'serial_number' => $existing->serial_number,
+                    'file_url' => $fileUrl,
+                ],
+            ]);
+        }
+
+        // Generate unique serial number
+        $serialNumber = $this->generateSerialNumber($diploma);
+
+        // Create certificate record (pending)
+        $certificate = DiplomaCertificate::create([
+            'user_id' => $user->id,
+            'diploma_id' => $diploma->id,
+            'user_category_enrollment_id' => $enrollment->id,
+            'serial_number' => $serialNumber,
+            'file_path' => "certificates/diplomas/{$serialNumber}.pdf",
+            'status' => 'pending',
+            'verification_token' => Str::uuid()->toString(),
+            'student_name' => $user->name,
+            'issued_at' => now(),
+            'certificate_data' => [
+                'diploma_name' => $diploma->name,
+                'student_name' => $user->name,
+                'issued_date' => now()->toDateString(),
+                'total_courses_completed' => $diploma->courses()->count(),
+            ]
+        ]);
+
+        // Dispatch job to generate PDF
+        \App\Jobs\GenerateDiplomaCertificateJob::dispatch($certificate);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إنشاء سجل الشهادة وإرسال مهمة توليد الـ PDF',
+            'certificate' => [
+                'id' => $certificate->id,
+                'serial_number' => $certificate->serial_number,
+                'status' => $certificate->status,
+                'verification_token' => $certificate->verification_token,
+            ],
+        ]);
     }
 
     /**
@@ -233,6 +453,177 @@ class DiplomaCertificateController extends Controller
                 'success' => false,
                 'message' => 'Error retrieving certificates',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * List enrolled students in a diploma with progress and certificate status
+     *
+     * GET /api/admin/diplomas/{diploma}/students
+     */
+    public function listEnrolledStudents(Request $request, CategoryOfCourse $diploma): JsonResponse
+    {
+        try {
+            $enrollments = UserCategoryEnrollment::where('category_id', $diploma->id)
+                ->where('status', 'active')
+                ->with('user')
+                ->get();
+
+            $service = $this->eligibilityService;
+
+            $students = $enrollments->map(function ($enrollment) use ($diploma, $service) {
+                /** @var \App\Models\User $user */
+                $user = $enrollment->user;
+                $progress = $service->calculateCompletionPercentage($user, $diploma);
+
+                $certificate = DiplomaCertificate::where('user_id', $user->id)
+                    ->where('diploma_id', $diploma->id)
+                    ->where('status', '!=', 'revoked')
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                // Map backend certificate status to frontend admin states
+                // generated: status == completed
+                // processing: status == pending OR processing
+                // not_generated: no certificate OR revoked/failed
+                $certificateStatus = 'not_generated';
+                if ($certificate) {
+                    if ($certificate->status === 'completed') {
+                        $certificateStatus = 'generated';
+                    } elseif (in_array($certificate->status, ['pending', 'processing'])) {
+                        $certificateStatus = 'processing';
+                    } else {
+                        // failed or other statuses considered not_generated for admin UI
+                        $certificateStatus = 'not_generated';
+                    }
+                }
+
+                return [
+                    'student_id' => $user->id,
+                    'student_name' => $user->name,
+                    'email' => $user->email,
+                    'progress' => $progress,
+                    'certificate_status' => $certificateStatus,
+                    'is_eligible' => $progress == 100.0,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'diploma' => [
+                        'id' => $diploma->id,
+                        'name' => $diploma->name,
+                        'total_courses' => $diploma->courses()->count(),
+                    ],
+                    'students' => $students,
+                    'total' => $students->count(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving enrolled students',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate certificate for a specific student by path param
+     *
+     * POST /api/admin/diplomas/{diploma}/students/{student}/generate-certificate
+     */
+    public function generateForStudentById(Request $request, CategoryOfCourse $diploma, User $student): JsonResponse
+    {
+        try {
+            // Verify enrollment exists
+            $enrollment = UserCategoryEnrollment::where('user_id', $student->id)
+                ->where('category_id', $diploma->id)
+                ->first();
+
+            if (!$enrollment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'المستخدم غير مسجل في هذه الدبلومة'
+                ], 403);
+            }
+
+            // Backend validation: 100% completion
+            $percentage = $this->eligibilityService->calculateCompletionPercentage($student, $diploma);
+            if ($percentage < 100.0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن التوليد: نسبة الإنجاز أقل من 100%'
+                ], 403);
+            }
+
+            // Check existing certificate
+            $existing = DiplomaCertificate::where('user_id', $student->id)
+                ->where('diploma_id', $diploma->id)
+                ->where('status', '!=', 'revoked')
+                ->first();
+            if ($existing) {
+                $fileUrl = null;
+                if (!empty($existing->file_path) && Storage::disk('public')->exists($existing->file_path)) {
+                    $fileUrl = Storage::url($existing->file_path);
+                } elseif (!empty($existing->file_path) && preg_match('/^https?:\/\//i', $existing->file_path)) {
+                    $fileUrl = $existing->file_path;
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $existing->status === 'completed' ? 'تم إصدار الشهادة مسبقًا' : 'الشهادة قيد المعالجة',
+                    'certificate' => [
+                        'id' => $existing->id,
+                        'status' => $existing->status,
+                        'serial_number' => $existing->serial_number,
+                        'file_url' => $fileUrl,
+                    ],
+                ]);
+            }
+
+            // Generate unique serial number
+            $serialNumber = $this->generateSerialNumber($diploma);
+
+            // Create certificate record (pending)
+            $certificate = DiplomaCertificate::create([
+                'user_id' => $student->id,
+                'diploma_id' => $diploma->id,
+                'user_category_enrollment_id' => $enrollment->id,
+                'serial_number' => $serialNumber,
+                'file_path' => "certificates/diplomas/{$serialNumber}.pdf",
+                'status' => 'pending',
+                'verification_token' => Str::uuid()->toString(),
+                'student_name' => $student->name,
+                'issued_at' => now(),
+                'certificate_data' => [
+                    'diploma_name' => $diploma->name,
+                    'student_name' => $student->name,
+                    'issued_date' => now()->toDateString(),
+                    'total_courses_completed' => $diploma->courses()->count(),
+                ]
+            ]);
+
+            // Dispatch job to generate PDF
+            \App\Jobs\GenerateDiplomaCertificateJob::dispatch($certificate);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إنشاء سجل الشهادة وإرسال مهمة توليد الـ PDF',
+                'certificate' => [
+                    'id' => $certificate->id,
+                    'serial_number' => $certificate->serial_number,
+                    'status' => $certificate->status,
+                    'verification_token' => $certificate->verification_token,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating certificate for student',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

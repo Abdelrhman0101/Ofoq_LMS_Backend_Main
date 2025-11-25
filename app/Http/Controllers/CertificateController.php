@@ -799,11 +799,11 @@ class CertificateController extends Controller
     {
         $user = Auth::user();
         $certificate = \App\Models\DiplomaCertificate::where('user_id', $user->id)
-            ->where('category_id', $category->id)
+            ->where('diploma_id', $category->id)
             ->first();
 
-        if (!$certificate) {
-            return response()->json(['message' => 'لم يتم إصدار شهادة لهذه الدبلومة بعد.'], 404);
+        if (!$certificate || $certificate->status !== 'completed') {
+            return response()->json(['message' => 'لم يتم إصدار شهادة مكتملة لهذه الدبلومة بعد.'], 404);
         }
 
         return response()->json([

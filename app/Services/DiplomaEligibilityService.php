@@ -13,6 +13,28 @@ use Illuminate\Support\Collection;
 class DiplomaEligibilityService
 {
     /**
+     * Calculate diploma completion percentage for a student
+     * Formula: (passed courses in diploma / total diploma courses) * 100
+     */
+    public function calculateCompletionPercentage(User $user, CategoryOfCourse $diploma): float
+    {
+        $totalCourses = $diploma->courses()->count();
+        if ($totalCourses === 0) {
+            return 0.0;
+        }
+
+        $completedCourses = UserCourse::where('user_id', $user->id)
+            ->whereHas('course', function (Builder $query) use ($diploma) {
+                $query->where('category_id', $diploma->id);
+            })
+            ->where('status', 'completed')
+            ->where('final_exam_score', '>=', 60)
+            ->count();
+
+        // Use 2-decimal precision to preserve exact 100% when fully completed
+        return round(($completedCourses / $totalCourses) * 100, 2);
+    }
+    /**
      * Get all eligible students for a specific diploma
      * 
      * @param CategoryOfCourse $diploma

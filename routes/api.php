@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\Admin\InstructorController as AdminInstructorController;
 use App\Http\Controllers\Admin\FeaturedCourseController as AdminFeaturedCourseController;
+use App\Http\Controllers\Admin\DiplomaCertificateController as AdminDiplomaCertificateController;
 use App\Http\Controllers\LessonNoteController;
 use App\Http\Controllers\Admin\BlockedUserController;
 use App\Http\Controllers\UserCategoryEnrollmentController;
@@ -158,6 +159,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/backups/restore', [BackupController::class, 'restore']);
         Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');
         Route::delete('/backups/{filename}', [BackupController::class, 'delete'])->where('filename', '.*');
+
+        // Diploma Certificates Management (Admin)
+        Route::get('/diploma-certificates/student', [AdminDiplomaCertificateController::class, 'searchStudentDiplomas']);
+        Route::post('/diplomas/{diploma}/certificates/generate', [AdminDiplomaCertificateController::class, 'generateForStudent']);
     });
 
     // User/Student routes (accessible to authenticated users)
