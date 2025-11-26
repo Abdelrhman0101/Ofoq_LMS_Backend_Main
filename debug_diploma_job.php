@@ -14,13 +14,37 @@ echo "--------------------------------------------------\n";
 echo "Diploma Certificate Debugger\n";
 echo "--------------------------------------------------\n";
 
-// Get the latest diploma certificate or a specific one
-// You can change the ID here to test a specific certificate
+// Get the latest diploma certificate or create a test one
 $certificate = DiplomaCertificate::latest()->first();
 
 if (!$certificate) {
-    echo "[ERROR] No DiplomaCertificate found in database.\n";
-    exit(1);
+    echo "[INFO] No existing DiplomaCertificate found. Attempting to create a TEST record...\n";
+    
+    $user = \App\Models\User::first();
+    $category = \App\Models\CategoryOfCourse::first();
+    
+    if (!$user || !$category) {
+        echo "[ERROR] Cannot create test certificate: No Users or Categories found in DB.\n";
+        exit(1);
+    }
+    
+    echo "[INFO] Creating test certificate for User: {$user->name} (ID: {$user->id}) and Diploma: {$category->name} (ID: {$category->id})\n";
+    
+    $certificate = DiplomaCertificate::create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'serial_number' => 'TEST-' . time(),
+        'verification_token' => \Illuminate\Support\Str::uuid(),
+        'status' => 'pending',
+        'student_name' => $user->name,
+        'certificate_data' => json_encode([
+            'student_name' => $user->name,
+            'diploma_name' => $category->name,
+            'completion_date' => now()->format('Y-m-d'),
+        ]),
+    ]);
+    
+    echo "[INFO] Test certificate created with ID: {$certificate->id}\n";
 }
 
 echo "Certificate ID: " . $certificate->id . PHP_EOL;
