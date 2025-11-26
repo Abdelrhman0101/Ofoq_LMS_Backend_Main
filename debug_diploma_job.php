@@ -28,11 +28,18 @@ if (!$certificate) {
         exit(1);
     }
     
-    echo "[INFO] Creating test certificate for User: {$user->name} (ID: {$user->id}) and Diploma: {$category->name} (ID: {$category->id})\n";
+    // Find or create enrollment
+    $enrollment = \App\Models\UserCategoryEnrollment::firstOrCreate(
+        ['user_id' => $user->id, 'category_id' => $category->id],
+        ['status' => 'completed', 'completed_at' => now()]
+    );
+
+    echo "[INFO] Using Enrollment ID: {$enrollment->id}\n";
     
     $certificate = DiplomaCertificate::create([
         'user_id' => $user->id,
         'diploma_id' => $category->id,
+        'user_category_enrollment_id' => $enrollment->id,
         'serial_number' => 'TEST-' . time(),
         'verification_token' => \Illuminate\Support\Str::uuid(),
         'status' => 'pending',
