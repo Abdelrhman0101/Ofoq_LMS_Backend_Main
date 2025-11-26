@@ -182,7 +182,10 @@ class GenerateCertificateJob implements ShouldQueue
 
         } catch (\Exception $e) {
             // 5. In case of failure
-            $this->certificate->update(['status' => 'failed']);
+            $this->certificate->update([
+                'status' => 'failed',
+                'certificate_data' => ['error' => $e->getMessage()] // Store error for debugging
+            ]);
             
             Log::error('Certificate Generation Failed: ' . $e->getMessage(), [
                 'certificate_id' => $this->certificate->id,
