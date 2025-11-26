@@ -112,6 +112,13 @@ class UserLessonController extends Controller
             ], 403);
         }
 
+        // Check if this is the first time completing this lesson
+        $existingProgress = UserLessonProgress::where('user_id', $user->id)
+            ->where('lesson_id', $id)
+            ->first();
+        
+        $isFirstCompletion = !$existingProgress || $existingProgress->status !== 'completed';
+
         // Mark lesson as completed
         $lessonProgress = UserLessonProgress::updateOrCreate(
             [
@@ -124,6 +131,21 @@ class UserLessonController extends Controller
                 'started_at' => now() // In case it wasn't started before
             ]
         );
+
+        // Increment view counters only on first completion
+        if ($isFirstCompletion) {
+            // Increment lesson views
+            $lesson->increment('views');
+
+            // Increment course total_views
+            $course->increment('total_views');
+
+            // Increment diploma total_ if course belongs to a diploma
+            if (!empty($course->category_id)) {
+                \App\Models\CategoryOfCourse::where('id', $course->category_id)
+                    ->increment('total_views');
+            }
+        }
 
         // Update course progress
         $this->updateCourseProgress($user->id, $course->id);

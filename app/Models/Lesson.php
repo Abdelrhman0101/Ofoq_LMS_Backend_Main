@@ -51,5 +51,6 @@ class Lesson extends Model
         'resources',
         'is_visible',
         'video_url',
+        'views',
     ];
 }

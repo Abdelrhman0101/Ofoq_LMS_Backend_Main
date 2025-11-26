@@ -31,7 +31,9 @@ class DiplomaController extends Controller
         } elseif ($sort === 'oldest') {
             $query->orderBy('id');
         } else {
-            $query->orderBy('display_order')->orderBy('name');
+            $query->orderByRaw('`display_order` IS NULL')
+                  ->orderBy('display_order')
+                  ->orderBy('id');
         }
 
         $diplomas = $query->paginate($perPage);

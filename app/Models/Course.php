@@ -130,7 +130,8 @@ class Course extends Model
         'hours_count',
         'reviews_count',
         'cover_image',
-        'rank'
+        'rank',
+        'total_views'
     ];
     protected $appends = ['cover_image_url'];
 
@@ -169,5 +170,13 @@ class Course extends Model
             $query->oldest();
         }
         return $query;
+    }
+
+    /**
+     * Get total views from all lessons in this course
+     */
+    public function getCalculatedTotalViewsAttribute()
+    {
+        return $this->lessons()->sum('views');
     }
 }

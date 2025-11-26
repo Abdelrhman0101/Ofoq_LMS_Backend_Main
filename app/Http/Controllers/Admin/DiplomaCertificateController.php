@@ -465,10 +465,19 @@ class DiplomaCertificateController extends Controller
     public function listEnrolledStudents(Request $request, CategoryOfCourse $diploma): JsonResponse
     {
         try {
-            $enrollments = UserCategoryEnrollment::where('category_id', $diploma->id)
-                ->where('status', 'active')
-                ->with('user')
-                ->get();
+            $query = UserCategoryEnrollment::where('category_id', $diploma->id)
+                ->where('status', 'active');
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->whereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+                });
+            }
+
+            $enrollments = $query->with('user')->get();
 
             $service = $this->eligibilityService;
 
@@ -486,17 +495,26 @@ class DiplomaCertificateController extends Controller
                 // Map backend certificate status to frontend admin states
                 // generated: status == completed
                 // processing: status == pending OR processing
-                // not_generated: no certificate OR revoked/failed
+                // failed: status == failed
+                // not_generated: no certificate OR revoked
                 $certificateStatus = 'not_generated';
                 if ($certificate) {
                     if ($certificate->status === 'completed') {
                         $certificateStatus = 'generated';
                     } elseif (in_array($certificate->status, ['pending', 'processing'])) {
                         $certificateStatus = 'processing';
+                    } elseif ($certificate->status === 'failed') {
+                        $certificateStatus = 'failed';
                     } else {
-                        // failed or other statuses considered not_generated for admin UI
                         $certificateStatus = 'not_generated';
                     }
+                }
+
+                $fileUrl = null;
+                if ($certificate && !empty($certificate->file_path) && Storage::disk('public')->exists($certificate->file_path)) {
+                    $fileUrl = Storage::url($certificate->file_path);
+                } elseif ($certificate && !empty($certificate->file_path) && preg_match('/^https?:\/\//i', $certificate->file_path)) {
+                    $fileUrl = $certificate->file_path;
                 }
 
                 return [
@@ -506,8 +524,28 @@ class DiplomaCertificateController extends Controller
                     'progress' => $progress,
                     'certificate_status' => $certificateStatus,
                     'is_eligible' => $progress == 100.0,
+                    'file_url' => $fileUrl,
                 ];
             });
+
+            if ($request->filled('filter')) {
+                $filter = $request->filter;
+                $students = $students->filter(function ($student) use ($filter) {
+                    if ($filter === 'ready') {
+                        return $student['is_eligible'] && $student['certificate_status'] === 'not_generated';
+                    }
+                    if ($filter === 'generated') {
+                        return $student['certificate_status'] === 'generated';
+                    }
+                    if ($filter === 'not_ready') {
+                        return !$student['is_eligible'];
+                    }
+                    if ($filter === 'failed') {
+                        return $student['certificate_status'] === 'failed';
+                    }
+                    return true;
+                })->values();
+            }
 
             return response()->json([
                 'success' => true,

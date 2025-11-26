@@ -168,6 +168,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // User/Student routes (accessible to authenticated users)
     Route::get('/courseEnroll/{course}', [CourseController::class, 'show']);
     Route::post('/courses/{id}/enroll', [UserCourseController::class, 'enroll']);
+    Route::get('/my-enrollments/filters', [UserCourseController::class, 'myEnrollmentFilters']);
     Route::get('/my-enrollments', [UserCourseController::class, 'myEnrollments']);
     // Student exams page: list courses and final exam status
     Route::get('/my-tests', [FinalExamController::class, 'myTests']);

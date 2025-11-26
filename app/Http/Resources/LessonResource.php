@@ -44,6 +44,7 @@ class LessonResource extends JsonResource
             'attachments' => $canView ? $this->attachments : null,
             'resources' => $canView ? $this->resources : null,
             'quiz' => new QuizResource($this->whenLoaded('quiz')),
+            'views' => $this->views,
         ];
     }
 }

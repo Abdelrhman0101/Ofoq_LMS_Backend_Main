@@ -22,6 +22,7 @@ class CategoryOfCourse extends Model
         'price',
         'cover_image',
         'display_order',
+        'total_views',
     ];
 
     protected $casts = [
@@ -78,5 +79,13 @@ class CategoryOfCourse extends Model
     public function certificates()
     {
         return $this->hasMany(DiplomaCertificate::class, 'diploma_id');
+    }
+
+    /**
+     * Get total views from all courses in this diploma
+     */
+    public function getCalculatedTotalViewsAttribute()
+    {
+        return $this->courses()->sum('total_views');
     }
 }

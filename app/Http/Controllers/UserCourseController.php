@@ -26,9 +26,28 @@ class UserCourseController extends Controller
         if ($perPage < 1) { $perPage = 12; }
         if ($perPage > 100) { $perPage = 100; }
 
-        $enrollments = UserCourse::query()
-            ->where('user_id', $user->id)
-            ->with(['course' => function ($query) use ($request) {
+        $query = UserCourse::query()
+            ->where('user_id', $user->id);
+
+        // Filter by Status
+        if ($request->has('status')) {
+            $status = $request->input('status');
+            if ($status === 'completed') {
+                $query->where('progress_percentage', 100);
+            } elseif ($status === 'in_progress') {
+                $query->where('progress_percentage', '<', 100);
+            }
+        }
+
+        // Filter by Category (Diploma)
+        if ($request->has('category_id')) {
+            $categoryId = $request->input('category_id');
+            $query->whereHas('course', function ($q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+
+        $enrollments = $query->with(['course' => function ($query) use ($request) {
                 $query->search($request->input('search'))
                     ->field($request->input('field'))
                     ->sort($request->input('sort'))
@@ -38,11 +57,25 @@ class UserCourseController extends Controller
             ->orderBy('created_at', 'desc') // Ensure consistent ordering
             ->paginate($perPage);
 
-        // Extract courses from enrollments
-        $courses = $enrollments->pluck('course');
+        // Map enrollments to include course details + enrollment status
+        $data = $enrollments->map(function ($enrollment) {
+            $course = $enrollment->course;
+            // Use CourseResource if available, or manual mapping. 
+            // For safety and consistency with the request, let's manually map or merge.
+            // Ideally we'd use a Resource, but we need to inject the pivot data.
+            
+            $courseData = (new CourseResource($course))->resolve();
+            
+            return array_merge($courseData, [
+                'progress_percentage' => $enrollment->progress_percentage,
+                'enrollment_status' => $enrollment->status,
+                'enrolled_at' => $enrollment->created_at,
+                'completed_at' => $enrollment->completed_at,
+            ]);
+        });
 
         return response()->json([
-            'data' => CourseResource::collection($courses),
+            'data' => $data,
             'pagination' => [
                 'total' => $enrollments->total(),
                 'per_page' => $enrollments->perPage(),
@@ -52,6 +85,45 @@ class UserCourseController extends Controller
                 'to' => $enrollments->lastItem(),
             ],
             'message' => 'Courses fetched successfully.'
+        ]);
+    }
+
+    /**
+     * Get filters for user enrollments (categories, counts)
+     */
+    public function myEnrollmentFilters()
+    {
+        $user = Auth::user();
+        
+        // Get all enrollments for stats
+        $allEnrollments = UserCourse::where('user_id', $user->id)->get();
+        
+        $total = $allEnrollments->count();
+        $completed = $allEnrollments->where('progress_percentage', 100)->count();
+        $inProgress = $allEnrollments->where('progress_percentage', '<', 100)->count();
+
+        // Get unique categories from enrolled courses
+        $categoryIds = UserCourse::where('user_id', $user->id)
+            ->with('course.category')
+            ->get()
+            ->pluck('course.category')
+            ->unique('id')
+            ->values()
+            ->map(function ($cat) {
+                return [
+                    'id' => $cat->id,
+                    'name' => $cat->name, // Localized object
+                    'title' => $cat->title ?? $cat->label ?? null
+                ];
+            });
+
+        return response()->json([
+            'counts' => [
+                'all' => $total,
+                'completed' => $completed,
+                'in_progress' => $inProgress
+            ],
+            'categories' => $categoryIds
         ]);
     }
 

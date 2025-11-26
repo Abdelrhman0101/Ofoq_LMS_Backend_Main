@@ -16,8 +16,10 @@ class CategoryController extends Controller
     {
         $categories = CategoryOfCourse::query()
             ->withCount('courses')
+            // Order by display_order ascending, NULLs last, then by id
+            ->orderByRaw('`display_order` IS NULL')
             ->orderBy('display_order')
-            ->orderBy('name')
+            ->orderBy('id')
             ->get();
 
         return response()->json([
