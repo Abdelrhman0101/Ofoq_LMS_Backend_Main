@@ -186,16 +186,24 @@ class GenerateCertificateJob implements ShouldQueue
 
         } catch (\Exception $e) {
             // 5. In case of failure
+            $debugInfo = [
+                'error' => $e->getMessage(),
+                'debug_node_path' => $nodePath ?? 'N/A',
+                'debug_chrome_path' => $chromePath ?? 'N/A',
+                'chrome_exists' => !empty($chromePath) ? (file_exists($chromePath) ? 'YES' : 'NO') : 'N/A',
+                'chrome_readable' => !empty($chromePath) ? (is_readable($chromePath) ? 'YES' : 'NO') : 'N/A',
+                'chrome_perms' => !empty($chromePath) && file_exists($chromePath) ? substr(sprintf('%o', fileperms($chromePath)), -4) : 'N/A',
+                'current_user' => get_current_user() . ' (UID: ' . getmyuid() . ')',
+            ];
+
             $this->certificate->update([
                 'status' => 'failed',
-                'certificate_data' => ['error' => $e->getMessage()] // Store error for debugging
+                'certificate_data' => $debugInfo
             ]);
             
             Log::error('Certificate Generation Failed: ' . $e->getMessage(), [
                 'certificate_id' => $this->certificate->id,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+                'debug_info' => $debugInfo,
                 'trace' => $e->getTraceAsString(),
             ]);
         }
