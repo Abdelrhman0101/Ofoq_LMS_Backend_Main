@@ -1062,7 +1062,6 @@ class CertificateController extends Controller
             ]
         ]);
     }
-
     /**
      * Request a new course certificate
      * Creates a new certificate request for authenticated student
@@ -1109,6 +1108,24 @@ class CertificateController extends Controller
             ->first();
 
         if ($existingCertificate) {
+            // If the status is 'failed', we allow retrying
+            if ($existingCertificate->status === 'failed') {
+                $existingCertificate->update([
+                    'status' => 'pending',
+                    'certificate_data' => null, // Reset data
+                ]);
+
+                // Dispatch the job again
+                \App\Jobs\GenerateCertificateJob::dispatch($existingCertificate);
+
+                return response()->json([
+                    'message' => 'تم إعادة طلب الشهادة بنجاح',
+                    'certificate_id' => $existingCertificate->id,
+                    'status' => $existingCertificate->status,
+                    'created_at' => $existingCertificate->created_at->toIso8601String(),
+                ], 200);
+            }
+
             return response()->json([
                 'message' => 'يوجد طلب شهادة سابق لهذا المقرر',
                 'certificate_id' => $existingCertificate->id,
@@ -1138,10 +1155,6 @@ class CertificateController extends Controller
         ], 201);
     }
 
-    /**
-     * Get certificate status for authenticated user and course
-     * Used by frontend to determine initial certificate state
-     */
     public function getCertificateStatus(Request $request, $courseId)
     {
         $user = Auth::user();
