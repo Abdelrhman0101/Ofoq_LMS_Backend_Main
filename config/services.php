@@ -47,4 +47,13 @@ return [
         'timeout' => env('CERTIFICATE_GENERATOR_TIMEOUT', 60),
     ],
 
+    'browsershot' => [
+        'node_path' => env('BROWSERSHOT_NODE_PATH'),
+        'node_path_windows' => env('BROWSERSHOT_NODE_PATH_WINDOWS'),
+        'chrome_path' => env('BROWSERSHOT_CHROME_PATH'),
+        'chrome_path_linux' => env('BROWSERSHOT_CHROME_PATH_LINUX'),
+        'chrome_path_windows' => env('BROWSERSHOT_CHROME_PATH_WINDOWS'),
+        'no_sandbox' => env('BROWSERSHOT_NO_SANDBOX', false),
+    ],
+
 ];
