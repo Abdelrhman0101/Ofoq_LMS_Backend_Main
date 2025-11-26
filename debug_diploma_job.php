@@ -32,7 +32,7 @@ if (!$certificate) {
     
     $certificate = DiplomaCertificate::create([
         'user_id' => $user->id,
-        'category_id' => $category->id,
+        'diploma_id' => $category->id,
         'serial_number' => 'TEST-' . time(),
         'verification_token' => \Illuminate\Support\Str::uuid(),
         'status' => 'pending',
