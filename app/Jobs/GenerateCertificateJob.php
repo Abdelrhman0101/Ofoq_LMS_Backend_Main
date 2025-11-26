@@ -145,6 +145,11 @@ class GenerateCertificateJob implements ShouldQueue
                 ? config('services.browsershot.chrome_path_windows') 
                 : config('services.browsershot.chrome_path_linux', config('services.browsershot.chrome_path'));
 
+            // [Emergency Fix] Hardcoded fallback if config fails
+            if (empty($chromePath) && !$isWindows) {
+                $chromePath = '/home/ofuq-api/htdocs/api.ofuq.academy/storage/browsers/chrome/linux-142.0.7444.61/chrome-linux64/chrome';
+            }
+
             $noSandboxDefault = $isWindows ? false : true;
             $noSandbox = config('services.browsershot.no_sandbox', $noSandboxDefault);
 
