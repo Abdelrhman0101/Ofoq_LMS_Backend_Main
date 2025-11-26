@@ -26,7 +26,7 @@ class UserCourseController extends Controller
         if ($perPage < 1) { $perPage = 12; }
         if ($perPage > 100) { $perPage = 100; }
 
-        $courses = UserCourse::query()
+        $enrollments = UserCourse::query()
             ->where('user_id', $user->id)
             ->with(['course' => function ($query) use ($request) {
                 $query->search($request->input('search'))
@@ -35,12 +35,24 @@ class UserCourseController extends Controller
                     ->withCount(['chapters', 'lessons', 'reviews'])
                     ->withAvg('reviews', 'rating');
             }])
+            ->orderBy('created_at', 'desc') // Ensure consistent ordering
             ->paginate($perPage);
 
-        return CourseResource::collection($courses->pluck('course'))
-            ->additional([
-                'message' => 'Courses fetched successfully.'
-            ]);
+        // Extract courses from enrollments
+        $courses = $enrollments->pluck('course');
+
+        return response()->json([
+            'data' => CourseResource::collection($courses),
+            'pagination' => [
+                'total' => $enrollments->total(),
+                'per_page' => $enrollments->perPage(),
+                'current_page' => $enrollments->currentPage(),
+                'last_page' => $enrollments->lastPage(),
+                'from' => $enrollments->firstItem(),
+                'to' => $enrollments->lastItem(),
+            ],
+            'message' => 'Courses fetched successfully.'
+        ]);
     }
 
 
