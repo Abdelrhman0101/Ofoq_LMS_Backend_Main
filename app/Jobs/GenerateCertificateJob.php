@@ -66,6 +66,8 @@ class GenerateCertificateJob implements ShouldQueue
 
             // Get course hours (using hours_count field)
             $course_hours = $course->hours_count ?? 0;
+            // Get lectures count from lessons relation
+            $lectures_count = $course->lessons()->count();
             
             // Get diploma name through category (if available)
             $diploma_name = null;
@@ -80,6 +82,7 @@ class GenerateCertificateJob implements ShouldQueue
                 'course_title' => $course->title, // Keep for backward compatibility
                 'completion_date' => $this->certificate->updated_at->format('j F Y'),
                 'course_hours' => $course_hours . ' ساعات تدريبية',
+                'lectures_count' => $lectures_count,
                 'diploma_name' => $diploma_name ?? 'دبلومة عامة',
                 'serial_number' => $serial,
                 'verification_token' => $token,

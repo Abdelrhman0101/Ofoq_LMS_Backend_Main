@@ -34,12 +34,12 @@
             width: 60%;
             margin: 0 auto;
             text-align: center;
-            padding-top: 165px;
+            padding-top: 190px;
         }
 
         /* عنوان الشهادة */
         .title {
-            font-size: 36px;
+            font-size: 34px;
             font-weight: 700;
             color: #2b3487; /* بنفسجي مزرق قريب من اللي في التصميم */
             margin-bottom: 6px;
@@ -48,7 +48,7 @@
 
         /* السطر التعريفي */
         .subtitle {
-            font-size: 25px;
+            font-size: 23px;
             font-weight: 700;
             color: #4b5563;
             margin-bottom: 28px;
@@ -65,7 +65,7 @@
 
         /* اسم الطالب */
         .student-name {
-            font-size: 30px;
+            font-size: 28px;
             font-weight: 700;
             color: #0f172a;
             margin-bottom: 10px;
@@ -73,7 +73,7 @@
 
         /* سطر "قد حضر..." */
         .pre-course {
-            font-size: 20px;
+            font-size: 18px;
             color: #475569;
             margin-bottom: 12px;
             font-weight: 700;
@@ -82,7 +82,7 @@
 
         /* عنوان الكورس */
         .course-title {
-            font-size: 25px;
+            font-size: 23px;
             font-weight: 700;
             color: #0f172a;
             margin-bottom: 20px;
@@ -91,7 +91,7 @@
 
         /* تفاصيل الساعات والدبلومة */
         .details {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             color: #4b5563;
             line-height: 1.9;
@@ -106,65 +106,65 @@
             padding: 4px 14px 5px;
             border-radius: 999px;
             font-weight: 700;
-            font-size:20px;
+            font-size:18px;
             margin: 0 4px;
         }
 
         /* جملة الدعاء */
         .closing-text {
             margin-top: 20px;
-            font-size: 25px;
+            font-size: 23px;
             color: #475569;
             font-weight: 700;
         }
 
         /* التاريخ */
         .footer-note {
-            font-size: 14px;
+            font-size: 12px;
             color: #2d2e31ff;
-            margin-top: 25px;
             font-weight: 700;
         }
 
         /* الرقم التسلسلي */
         .serial-number {
-            font-size: 13px;
+            font-size: 11px;
             color: #888;
             margin-top: 15px; /* مسافة بسيطة فوقه */
+        }
+
+        .footer-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
         }
     </style>
 </head>
 <body>
     <div class="content-container">
-        <h1 class="title">شــهــادة</h1>
-        <p class="subtitle">تـشـهـد مـنـصـة أفــق لـلـتـعـلـيـم والـتـدريـب أن الـطـالـب</p>
-        <div class="divider"></div>
+
+        <p class="subtitle">تشهد منصة أفق للتعليم والتدريب بأن:</p>
 
         <h2 class="student-name">{{ $student_name }}</h2>
+        <div class="divider"></div>
 
-        <p class="pre-course">قد حضر المقرر الدراسي</p>
+        <p class="pre-course">قد أتمّ بنجاح متطلبات الكورس التدريبي، بعنوان:</p>
 
         <h3 class="course-title">{{ $course_name }}</h3>
 
         <p class="details">
             بواقع
-            <span class="highlight">{{ $course_hours }}</span>
+            <span class="highlight">{{ $lectures_count }}</span>
+            محاضرة.
         </p>
         <p class="details">
-            ضمن دبلومة
-            <span class="highlight">{{ $diploma_name }}</span>
-            وقد اجتاز الاختبار بنجاح وهذه شهادة منّا بذلك 
-            سائلين المولى عز وجل له دوام التوفيق والسداد.
+            واجتاز جميع المهام والتكليفات المقررة، ملتزماً بمعايير الجودة الأكاديمية ومستوى الأداء المطلوب، سائلين الله تعالى أن يوفقه في مسيرته العلمية والعملية.
         </p>
 
 
-        <p class="footer-note">
-        {{ $completion_date }}
-        </p>
-        
-        <p class="footer-note">
-            Serial No: {{ $serial_number }}
-        </p>
+        <div class="footer-container">
+            <p class="footer-note">رقم الشهادة: {{ $serial_number }}</p>
+            <p class="footer-note">تاريخ الإصدار: {{ $issued_date }}</p>
+        </div>
     </div>
 </body>
 </html>

@@ -137,32 +137,22 @@
 </head>
 <body>
     <div class="content-container">
-        <h1 class="title">{{ $h1_text }}</h1>
-        <p class="subtitle">{{ $p1_text }}</p>
+        <h1 class="title">شهادة الدبلومة</h1>
+        <p class="subtitle">تشهد منصة أفق للتعليم والتدريب بأن:</p>
         <div class="divider"></div>
 
         <h2 class="student-name">{{ $student_name }}</h2>
 
-        <p class="pre-course">{{ $p2_text }}</p>
+        <p class="pre-course">قد أتمّ بنجاح كافة مساقات ومتطلبات دبلومة :</p>
 
-        <h3 class="course-title">{{ $diploma_name }}</h3>
+        <h3 class="course-title">«{{ $diploma_name }}»</h3>
 
-        <p class="details">
-            بواقع
-            <span class="highlight">{{ $total_courses }}</span>
-        </p>
-        <p class="details">
-            وقد اجتاز الاختبار بنجاح وهذه شهادة منّا بذلك 
-            سائلين المولى عز وجل له دوام التوفيق والسداد.
-        </p>
+        <p class="details">وقد اجتاز المتدرب جميع المهام والتكليفات المقررة، ملتزماً بمعايير الجودة الأكاديمية ومستوى الأداء المطلوب.</p>
+        <p class="details">صادرة عن منصة أفق للتعليم والتدريب</p>
 
-        <p class="footer-note">
-            {{ $footer_text }}: {{ $completion_date }}
-        </p>
+        <p class="footer-note">تاريخ الإصدار: {{ $issued_date }}</p>
         
-        <p class="footer-note">
-            رقم التسلسل: {{ $serial_number }}
-        </p>
+        <p class="footer-note">رقم الشهادة: {{ $serial_number }}</p>
     </div>
 </body>
 </html>
