@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <title>شهادة إتمام دبلومة</title>
     <style>
+        /* تصفير الهوامش الافتراضية للمتصفح لضمان التحكم الكامل */
+        h1, h2, h3, h4, h5, h6, p {
+            margin: 5px;
+            padding: 5px;
+        }
+
         /* الخط */
         @font-face {
             font-family: 'Cairo';
@@ -18,6 +24,7 @@
 
         body {
             font-family: 'Cairo', sans-serif;
+            font-weight: 700;
             margin: 0;
             padding: 0;
             width: 1123px; /* A4 Landscape */
@@ -27,20 +34,21 @@
             background-size: 100% 100%;
             background-repeat: no-repeat;
             color: #0f172a;
+            line-height: 1.1; /* تقليل المسافة بين الأسطر المتداخلة */
         }
 
         /* الحاوية */
         .content-container {
-            /* نطلّعها شوية لتحت حسب الخلفية بتاعتك */
-            width: 60%;
+            width: 80%;
             margin: 0 auto;
             text-align: center;
-            padding-top: 165px;
+            /* يمكنك تعديل هذه القيمة لتحريك الكتلة كاملة للأعلى أو الأسفل */
+            padding-top: 280px; 
         }
 
         /* عنوان الشهادة */
         .title {
-            font-size: 36px;
+            font-size: 38px;
             font-weight: 700;
             color: #2b3487; /* بنفسجي مزرق قريب من اللي في التصميم */
             margin-bottom: 6px;
@@ -49,10 +57,19 @@
 
         /* السطر التعريفي */
         .subtitle {
-            font-size: 25px;
+            font-size: 27px;
             font-weight: 700;
             color: #4b5563;
-            margin-bottom: 28px;
+            margin-bottom: 5px; /* تم تقليلها */
+        }
+
+        /* اسم الطالب */
+        .student-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 2px; /* تم تقليلها */
+            line-height: 1.2;
         }
 
         /* خط فاصل ديكور */
@@ -60,43 +77,35 @@
             width: 110px;
             height: 3px;
             background: linear-gradient(90deg, #2b3487 0%, #0ea5e9 100%);
-            margin: 0 auto 30px;
+            margin: 5px auto 10px; /* تقليل المسافات حول الخط */
             border-radius: 999px;
-        }
-
-        /* اسم الطالب */
-        .student-name {
-            font-size: 30px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 10px;
         }
 
         /* سطر "قد حضر..." */
         .pre-course {
-            font-size: 20px;
+            font-size: 22px;
             color: #475569;
-            margin-bottom: 12px;
+            margin-bottom: 2px; /* تم تقليلها */
             font-weight: 700;
-
         }
 
         /* عنوان الدبلومة */
         .course-title {
-            font-size: 25px;
+            font-size: 27px;
             font-weight: 700;
             color: #0f172a;
-            margin-bottom: 20px;
-            line-height: 1.5;
+            margin-bottom: 5px; /* تم تقليلها */
+            line-height: 1.2;
+            padding-top: 2px;
         }
 
         /* تفاصيل المقررات والدبلومة */
         .details {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
             color: #4b5563;
-            line-height: 1.9;
-            margin-bottom: 0;
+            line-height: 1.3;
+            margin-bottom: 8px; /* مسافة بسيطة قبل النص الختامي */
         }
 
         /* البادج اللي فيها المقررات/اسم الدبلومة */
@@ -104,32 +113,42 @@
             display: inline-block;
             background: linear-gradient(90deg, #0ea5e9 0%, #6366f1 100%);
             color: #fff;
-            padding: 4px 14px 5px;
+            padding: 2px 14px 4px; /* تصغير الـ padding */
             border-radius: 999px;
             font-weight: 700;
-            font-size:20px;
+            font-size: 22px;
             margin: 0 4px;
+            vertical-align: middle;
         }
 
-        /* جملة الدعاء */
+        /* جملة الدعاء والنص الختامي */
         .closing-text {
-            margin-top: 20px;
-            font-size: 25px;
+            /* تم دمج المسافات */
+            margin-bottom: 4px; 
+            font-size: 24px; /* تم تصغير الخط قليلاً ليتناسب مع التقارب */
             color: #475569;
             font-weight: 700;
+            line-height: 1.3;
         }
 
-        /* التاريخ */
+        /* الفوتر */
+        .footer-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px; /* مسافة تفصل الفوتر عن المحتوى */
+            padding: 0 20px;
+        }
+
         .footer-note {
-            font-size: 14px;
+            font-size: 16px;
             color: #2d2e31ff;
-            margin-top: 25px;
             font-weight: 700;
+            margin: 0;
         }
 
         /* الرقم التسلسلي */
         .serial-number {
-            font-size: 13px;
+            font-size: 15px;
             color: #888;
             margin-top: 15px; /* مسافة بسيطة فوقه */
         }
@@ -137,22 +156,23 @@
 </head>
 <body>
     <div class="content-container">
-        <h1 class="title">شهادة الدبلومة</h1>
         <p class="subtitle">تشهد منصة أفق للتعليم والتدريب بأن:</p>
-        <div class="divider"></div>
-
+        
         <h2 class="student-name">{{ $student_name }}</h2>
+        <div class="divider"></div>
 
         <p class="pre-course">قد أتمّ بنجاح كافة مساقات ومتطلبات دبلومة :</p>
 
         <h3 class="course-title">«{{ $diploma_name }}»</h3>
 
         <p class="details">وقد اجتاز المتدرب جميع المهام والتكليفات المقررة، ملتزماً بمعايير الجودة الأكاديمية ومستوى الأداء المطلوب.</p>
-        <p class="details">صادرة عن منصة أفق للتعليم والتدريب</p>
+        <p class="closing-text">صادرة عن منصة أفق للتعليم والتدريب</p>
 
-        <p class="footer-note">تاريخ الإصدار: {{ $issued_date }}</p>
-        
-        <p class="footer-note">رقم الشهادة: {{ $serial_number }}</p>
+        <br/><br/><br/><br/>
+        <div class="footer-container">
+            <p class="footer-note">رقم المسلسل: {{ $serial_number }}</p>
+            <p class="footer-note">تاريخ الإصدار: {{ $issued_date }}</p>
+        </div>
     </div>
 </body>
 </html>

@@ -674,13 +674,14 @@ class DiplomaCertificateController extends Controller
      */
     protected function generateSerialNumber(CategoryOfCourse $diploma): string
     {
-        $prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $diploma->name), 0, 3));
-        $year = date('Y');
-        
+        // Generate 7-digit numeric serial
         do {
-            $random = strtoupper(Str::random(6));
-            $serialNumber = "{$prefix}-{$year}-{$random}";
-        } while (DiplomaCertificate::where('serial_number', $serialNumber)->exists());
+            $random = mt_rand(0, 9999999);
+            $serialNumber = str_pad($random, 7, '0', STR_PAD_LEFT);
+        } while (
+            \App\Models\Certificate::where('serial_number', $serialNumber)->exists() ||
+            \App\Models\DiplomaCertificate::where('serial_number', $serialNumber)->exists()
+        );
 
         return $serialNumber;
     }

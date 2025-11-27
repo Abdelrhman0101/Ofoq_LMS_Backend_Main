@@ -22,21 +22,16 @@ class CertificateController extends Controller
      */
     private function generateSerialNumber(): string
     {
-        // Prefix with OFQ and current year for readability; ensure uniqueness in DB
-        $prefix = 'OFQ-' . now()->format('Y');
+        // Generate 7-digit numeric serial
         do {
-            $random = strtoupper(Str::random(6));
-            $serial = $prefix . '-' . $random;
+            $random = mt_rand(0, 9999999);
+            $serial = str_pad($random, 7, '0', STR_PAD_LEFT);
         } while (
             \App\Models\Certificate::where('serial_number', $serial)->exists() ||
             \App\Models\DiplomaCertificate::where('serial_number', $serial)->exists()
         );
         return $serial;
     }
-
-    /**
-     * Generate QR code for certificate verification
-     */
     private function generateQRCode(string $url): string
     {
         // Simple QR code generation using Google Charts API
@@ -490,35 +485,68 @@ class CertificateController extends Controller
     {
         $user = Auth::user();
 
-        $certificates = Certificate::where('user_id', $user->id)
-            ->with('course')
+        // 1. Course Certificates
+        $courseCertificates = Certificate::where('user_id', $user->id)
+            ->with(['course.category']) // Load category to get diploma name
             ->orderBy('issued_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'certificates' => $certificates->map(function ($certificate) {
+            ->get()
+            ->map(function ($certificate) {
                 $certificateData = is_array($certificate->certificate_data)
                     ? $certificate->certificate_data
                     : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
 
                 return [
                     'id' => $certificate->id,
+                    'type' => 'course',
                     'course_title' => optional($certificate->course)->title,
+                    'diploma_name' => optional(optional($certificate->course)->category)->name, // Get Diploma Name
                     'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
                     'completion_date' => $certificateData['completion_date'] ?? null,
                     'verification_token' => $certificate->verification_token,
                     'serial_number' => $certificate->serial_number,
-                    'verification_url' => url("/api/certificate/verify/{$certificate->verification_token}"),
+                    'verification_url' => url("/api/course-certificate/verify/{$certificate->verification_token}"),
                     'file_path' => $this->filePathToUrl($certificate->file_path),
                     'download_url' => url("/api/courses/{$certificate->course_id}/certificate"),
+                    'uuid' => $certificate->verification_token,
+                    'course_id' => $certificate->course_id,
                 ];
-            })
+            });
+
+        // 2. Diploma Certificates
+        $diplomaCertificates = DiplomaCertificate::where('user_id', $user->id)
+            ->with('diploma')
+            ->orderBy('issued_at', 'desc')
+            ->get()
+            ->map(function ($certificate) {
+                $certificateData = is_array($certificate->certificate_data)
+                    ? $certificate->certificate_data
+                    : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+
+                return [
+                    'id' => $certificate->id,
+                    'type' => 'diploma',
+                    'diploma_name' => optional($certificate->diploma)->name,
+                    'course_title' => optional($certificate->diploma)->name, // For compatibility
+                    'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
+                    'completion_date' => $certificateData['completion_date'] ?? null,
+                    'verification_token' => $certificate->verification_token,
+                    'serial_number' => $certificate->serial_number,
+                    'verification_url' => url("/api/diploma-certificate/verify/{$certificate->verification_token}"),
+                    'file_path' => $this->filePathToUrl($certificate->file_path),
+                    'download_url' => url("/api/categories/{$certificate->diploma_id}/certificate"),
+                    'uuid' => $certificate->verification_token,
+                    'category_id' => $certificate->diploma_id,
+                ];
+            });
+
+        // Merge and sort
+        $allCertificates = $courseCertificates->merge($diplomaCertificates)->sortByDesc('issued_at')->values();
+
+        return response()->json([
+            'certificates' => $allCertificates
         ]);
     }
 
-    /**
-     * Admin: Get certificates for a specific user
-     */
     public function userCertificatesAdmin(User $user)
     {
         $certificates = Certificate::where('user_id', $user->id)

@@ -25,64 +25,95 @@ class CertificateVerificationController extends Controller
 
         $serial = $request->serial_number;
 
-        // 2. البحث عن الشهادة (Case Insensitive)
-        // نستخدم whereRaw لضمان عدم الحساسية لحالة الأحرف
+        // 2. البحث عن شهادة المقرر (Case Insensitive)
         $certificate = CourseCertificate::whereRaw('LOWER(serial_number) = ?', [strtolower($serial)])
-                                        ->with(['user', 'course']) // نحمل العلاقات الضرورية
+                                        ->with(['user', 'course'])
                                         ->first();
 
-        // 3. إذا لم يتم العثور عليها -> 404 (وليس 500)
-        if (!$certificate) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'الرقم التسلسلي غير صحيح أو الشهادة غير موجودة.'
-            ], 404);
+        // 3. إذا وجدت شهادة مقرر، نعيد بياناتها
+        if ($certificate) {
+            try {
+                $grade = null;
+                if (!empty($certificate->certificate_data) && isset($certificate->certificate_data['grade'])) {
+                     $grade = $certificate->certificate_data['grade'];
+                }
+                if (!$grade) {
+                     $grade = 'ناجح';
+                }
+
+                $completionDate = $certificate->updated_at->format('Y-m-d');
+
+                return response()->json([
+                    'valid' => true,
+                    'data' => [
+                        'student_name' => $certificate->user->name ?? 'طالب',
+                        'course_title' => $certificate->course->title ?? 'مقرر',
+                        'exam_grade' => $grade,
+                        'exam_date' => $completionDate,
+                        'serial_number' => strtoupper($certificate->serial_number),
+                        'type' => 'course'
+                    ]
+                ], 200);
+
+            } catch (\Exception $e) {
+                Log::error('Verification Error (Course): ' . $e->getMessage());
+                return response()->json([
+                    'valid' => true,
+                    'data' => [
+                        'student_name' => $certificate->user->name ?? 'طالب',
+                        'course_title' => $certificate->course->title ?? 'مقرر',
+                        'exam_grade' => 'ناجح',
+                        'exam_date' => $certificate->updated_at->format('Y-m-d'),
+                        'serial_number' => strtoupper($certificate->serial_number),
+                        'type' => 'course'
+                    ]
+                ], 200);
+            }
         }
 
-        // 4. تجميع البيانات بشكل آمن (Safe Data Gathering)
-        try {
-            // محاولة استخراج الدرجة من الـ JSON المحفوظ (الأسرع والأضمن)
-            $grade = null;
-            if (!empty($certificate->certificate_data) && isset($certificate->certificate_data['grade'])) {
-                 $grade = $certificate->certificate_data['grade'];
+        // 4. البحث عن شهادة دبلومة (إذا لم نجد شهادة مقرر)
+        $diplomaCertificate = \App\Models\DiplomaCertificate::whereRaw('LOWER(serial_number) = ?', [strtolower($serial)])
+                                        ->with(['user', 'diploma'])
+                                        ->first();
+
+        if ($diplomaCertificate) {
+            try {
+                // شهادات الدبلومة عادة لا تحتوي على درجة اختبار محددة، بل إتمام
+                $grade = 'تم إتمام الدبلومة بنجاح';
+                $completionDate = $diplomaCertificate->updated_at->format('Y-m-d');
+
+                return response()->json([
+                    'valid' => true,
+                    'data' => [
+                        'student_name' => $diplomaCertificate->user->name ?? 'طالب',
+                        'course_title' => $diplomaCertificate->diploma->name ?? 'دبلومة', // نستخدم حقل course_title ليتوافق مع الواجهة الأمامية
+                        'exam_grade' => $grade,
+                        'exam_date' => $completionDate,
+                        'serial_number' => strtoupper($diplomaCertificate->serial_number),
+                        'type' => 'diploma'
+                    ]
+                ], 200);
+
+            } catch (\Exception $e) {
+                Log::error('Verification Error (Diploma): ' . $e->getMessage());
+                return response()->json([
+                    'valid' => true,
+                    'data' => [
+                        'student_name' => $diplomaCertificate->user->name ?? 'طالب',
+                        'course_title' => $diplomaCertificate->diploma->name ?? 'دبلومة',
+                        'exam_grade' => 'ناجح',
+                        'exam_date' => $diplomaCertificate->updated_at->format('Y-m-d'),
+                        'serial_number' => strtoupper($diplomaCertificate->serial_number),
+                        'type' => 'diploma'
+                    ]
+                ], 200);
             }
-            
-            // إذا لم نجدها في الـ JSON، نحاول حسابها (مع حماية ضد الأخطاء)
-            if (!$grade) {
-                 // هنا نضع منطقاً بسيطاً أو نتركه فارغاً لتجنب الـ 500
-                 // يمكننا افتراض "ناجح" إذا لم نتمكن من جلب الدرجة بدقة لتجنب المشاكل
-                 $grade = 'ناجح';
-            }
-
-            // تاريخ الإكمال
-            $completionDate = $certificate->updated_at->format('Y-m-d');
-
-            return response()->json([
-                'valid' => true,
-                'data' => [
-                    'student_name' => $certificate->user->name ?? 'طالب',
-                    'course_title' => $certificate->course->title ?? 'مقرر',
-                    'exam_grade' => $grade,
-                    'exam_date' => $completionDate,
-                    'serial_number' => strtoupper($certificate->serial_number)
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            // في أسوأ الظروف، لو حدث خطأ في التجميع، لا تنهار!
-            // سجل الخطأ وعد ببيانات أساسية
-            Log::error('Verification Error: ' . $e->getMessage());
-            
-            return response()->json([
-                'valid' => true, // الشهادة موجودة وسليمة
-                'data' => [
-                    'student_name' => $certificate->user->name ?? 'طالب',
-                    'course_title' => $certificate->course->title ?? 'مقرر',
-                    'exam_grade' => 'ناجح', // قيمة افتراضية
-                    'exam_date' => $certificate->updated_at->format('Y-m-d'),
-                    'serial_number' => strtoupper($certificate->serial_number)
-                ]
-            ], 200);
         }
+
+        // 5. إذا لم يتم العثور على أي منهما
+        return response()->json([
+            'valid' => false,
+            'message' => 'الرقم التسلسلي غير صحيح أو الشهادة غير موجودة.'
+        ], 404);
     }
 }
