@@ -98,6 +98,24 @@ class GenerateDiplomaCertificateJob implements ShouldQueue
             } else {
                 Log::warning('Diploma certificate background image missing or unreadable', ['path' => $imagePath]);
             }
+
+            // 5. تضمين الخطوط (Fonts) كـ Base64 لضمان ظهورها
+            $fontRegularPath = public_path('fonts/Cairo-Regular.ttf');
+            $fontBoldPath = public_path('fonts/Cairo-Bold.ttf');
+
+            if (is_readable($fontRegularPath)) {
+                $fontRegularData = base64_encode(file_get_contents($fontRegularPath));
+                $certificateData['fontRegularBase64'] = 'data:font/ttf;base64,' . $fontRegularData;
+            } else {
+                Log::warning('Cairo-Regular font missing', ['path' => $fontRegularPath]);
+            }
+
+            if (is_readable($fontBoldPath)) {
+                $fontBoldData = base64_encode(file_get_contents($fontBoldPath));
+                $certificateData['fontBoldBase64'] = 'data:font/ttf;base64,' . $fontBoldData;
+            } else {
+                Log::warning('Cairo-Bold font missing', ['path' => $fontBoldPath]);
+            }
             // --- نهاية الكود الجديد ---
 
             Log::info('Certificate data prepared', $certificateData);

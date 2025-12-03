@@ -371,6 +371,7 @@ class CertificateController extends Controller
             return redirect()->away($certificate->file_path);
         }
 
+
         // If file exists in local storage, stream it inline
         if (!empty($certificate->file_path) && Storage::disk('public')->exists($certificate->file_path)) {
             $filePath = Storage::disk('public')->path($certificate->file_path);
@@ -424,6 +425,7 @@ class CertificateController extends Controller
         $payload = is_array($certificate->certificate_data)
             ? $certificate->certificate_data
             : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+            
         return response()->json([
             'message' => 'تم تحديث مسار ملف الشهادة',
             'certificate' => [
@@ -463,6 +465,7 @@ class CertificateController extends Controller
         $payload = is_array($certificate->certificate_data)
             ? $certificate->certificate_data
             : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+            
         return response()->json([
             'message' => 'تم تحديث مسار ملف شهادة الدبلومة',
             'certificate' => [
@@ -485,9 +488,9 @@ class CertificateController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Course Certificates
-        $courseCertificates = Certificate::where('user_id', $user->id)
-            ->with(['course.category']) // Load category to get diploma name
+        // 1. Old/Legacy Course Certificates (from 'certificates' table)
+        $legacyCertificates = Certificate::where('user_id', $user->id)
+            ->with(['course.category'])
             ->orderBy('issued_at', 'desc')
             ->get()
             ->map(function ($certificate) {
@@ -499,7 +502,7 @@ class CertificateController extends Controller
                     'id' => $certificate->id,
                     'type' => 'course',
                     'course_title' => optional($certificate->course)->title,
-                    'diploma_name' => optional(optional($certificate->course)->category)->name, // Get Diploma Name
+                    'diploma_name' => optional(optional($certificate->course)->category)->name,
                     'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
                     'completion_date' => $certificateData['completion_date'] ?? null,
                     'verification_token' => $certificate->verification_token,
@@ -512,7 +515,34 @@ class CertificateController extends Controller
                 ];
             });
 
-        // 2. Diploma Certificates
+        // 2. New Course Certificates (from 'course_certificates' table)
+        $newCourseCertificates = \App\Models\CourseCertificate::where('user_id', $user->id)
+            ->with(['course.category'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($certificate) {
+                $certificateData = is_array($certificate->certificate_data)
+                    ? $certificate->certificate_data
+                    : (json_decode($certificate->certificate_data ?? '[]', true) ?? []);
+
+                return [
+                    'id' => $certificate->id,
+                    'type' => 'course',
+                    'course_title' => optional($certificate->course)->title,
+                    'diploma_name' => optional(optional($certificate->course)->category)->name,
+                    'issued_at' => $certificate->created_at->format('F d, Y'),
+                    'completion_date' => $certificateData['completion_date'] ?? null,
+                    'verification_token' => $certificate->verification_token,
+                    'serial_number' => $certificate->serial_number,
+                    'verification_url' => url("/api/course-certificate/verify/{$certificate->verification_token}"),
+                    'file_path' => $this->filePathToUrl($certificate->file_path),
+                    'download_url' => url("/api/courses/{$certificate->course_id}/certificate"),
+                    'uuid' => $certificate->verification_token,
+                    'course_id' => $certificate->course_id,
+                ];
+            });
+
+        // 3. Diploma Certificates
         $diplomaCertificates = DiplomaCertificate::where('user_id', $user->id)
             ->with('diploma')
             ->orderBy('issued_at', 'desc')
@@ -526,7 +556,7 @@ class CertificateController extends Controller
                     'id' => $certificate->id,
                     'type' => 'diploma',
                     'diploma_name' => optional($certificate->diploma)->name,
-                    'course_title' => optional($certificate->diploma)->name, // For compatibility
+                    'course_title' => optional($certificate->diploma)->name,
                     'issued_at' => optional($certificate->issued_at)->format('F d, Y'),
                     'completion_date' => $certificateData['completion_date'] ?? null,
                     'verification_token' => $certificate->verification_token,
@@ -539,15 +569,19 @@ class CertificateController extends Controller
                 ];
             });
 
-        // Merge and sort
-        $allCertificates = $courseCertificates->merge($diplomaCertificates)->sortByDesc('issued_at')->values();
+        // Merge all and sort
+        $allCertificates = $legacyCertificates
+            ->merge($newCourseCertificates)
+            ->merge($diplomaCertificates)
+            ->sortByDesc('issued_at')
+            ->values();
 
         return response()->json([
             'certificates' => $allCertificates
         ]);
     }
 
-    public function userCertificatesAdmin(User $user)
+    public function userCertificatesAdmin(\App\Models\User $user)
     {
         $certificates = Certificate::where('user_id', $user->id)
             ->with('course')
@@ -577,8 +611,6 @@ class CertificateController extends Controller
             })
         ]);
     }
-
-
 
     /**
      * Regenerate certificate data (admin only or in case of updates) - no PDF generation
@@ -669,7 +701,6 @@ class CertificateController extends Controller
                 $preparedCount++;
                 $certificateIds[] = $certificate->id;
             } catch (\Exception $e) {
-                // Log error but continue with other certificates
                 \Illuminate\Support\Facades\Log::error("Failed to prepare certificate data for user {$userCourse->user_id}: " . $e->getMessage());
             }
         }

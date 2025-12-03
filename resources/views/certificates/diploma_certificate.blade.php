@@ -13,12 +13,12 @@
         /* الخط */
         @font-face {
             font-family: 'Cairo';
-            src: url("{{ public_path('fonts/Cairo-Regular.ttf') }}");
+            src: url("{{ $fontRegularBase64 ?? public_path('fonts/Cairo-Regular.ttf') }}") format('truetype');
             font-weight: 400;
         }
         @font-face {
             font-family: 'Cairo';
-            src: url("{{ public_path('fonts/Cairo-Bold.ttf') }}");
+            src: url("{{ $fontBoldBase64 ?? public_path('fonts/Cairo-Bold.ttf') }}") format('truetype');
             font-weight: 700;
         }
 

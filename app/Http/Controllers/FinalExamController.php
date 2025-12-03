@@ -341,44 +341,21 @@ class FinalExamController extends Controller
                 do {
                     $random = strtoupper(\Illuminate\Support\Str::random(6));
                     $serialNumber = $prefix . '-' . $random;
-                } while (\App\Models\Certificate::where('serial_number', $serialNumber)->exists());
-                $certificate = Certificate::create([
+                } while (\App\Models\CourseCertificate::where('serial_number', $serialNumber)->exists());
+
+                // Create CourseCertificate instead of Certificate
+                $certificate = \App\Models\CourseCertificate::create([
                     'user_id' => Auth::id(),
                     'course_id' => $course->id,
-                    'user_course_id' => $userCourse->id,
+                    'status' => 'pending', // Initial status
                     'verification_token' => $verificationToken,
                     'serial_number' => $serialNumber,
-                    'student_name' => Auth::user()->name,
-                    'issued_at' => now(),
-                    'certificate_data' => json_encode([
-                        'user_name' => Auth::user()->name,
-                        'user_email' => Auth::user()->email,
-                        'course_title' => $course->title,
-                        'course_description' => $course->description,
-                        'completion_date' => now(),
-                        'enrollment_date' => $userCourse->created_at,
-                        'progress_percentage' => $userCourse->progress_percentage,
-                    ]),
+                    // certificate_data will be populated by the job
+                    'certificate_data' => null, 
                 ]);
 
-                // Generate PDF file immediately (first success only)
-                $verificationUrl = url("/api/certificate/verify/{$certificate->verification_token}");
-                $data = [
-                    'user_name' => Auth::user()->name,
-                    'course_title' => $course->title,
-                    'completion_date' => now()->format('F d, Y'),
-                    'verification_token' => $certificate->verification_token,
-                    'verification_url' => $verificationUrl,
-                    'certificate_id' => $certificate->id,
-                    'serial_number' => $certificate->serial_number,
-                ];
-
-                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('certificates.template', $data);
-                $pdf->setPaper('A4', 'landscape');
-                $filename = "certificate_{$certificate->id}_" . Auth::id() . ".pdf";
-                $pdfContent = $pdf->output();
-                \Illuminate\Support\Facades\Storage::disk('public')->put("certificates/{$filename}", $pdfContent);
-                $certificate->update(['file_path' => "certificates/{$filename}"]);
+                // Dispatch the job to generate the certificate PDF in the background
+                \App\Jobs\GenerateCertificateJob::dispatch($certificate);
             }
         }
 
