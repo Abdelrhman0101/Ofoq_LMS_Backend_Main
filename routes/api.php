@@ -156,6 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/backups', [BackupController::class, 'index']);
         Route::post('/backups/create', [BackupController::class, 'create']);
         Route::post('/backups/upload', [BackupController::class, 'upload']);
+        Route::post('/backups/validate', [BackupController::class, 'validate']);
         Route::post('/backups/restore', [BackupController::class, 'restore']);
         Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');
         Route::delete('/backups/{filename}', [BackupController::class, 'delete'])->where('filename', '.*');
