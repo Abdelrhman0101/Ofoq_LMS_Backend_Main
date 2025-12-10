@@ -10,11 +10,6 @@ use Illuminate\Http\Request;
 
 class LessonController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Lesson::class, 'lesson');
-    }
-
     public function index(Chapter $chapter)
     {
         return LessonResource::collection($chapter->lessons);

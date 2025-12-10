@@ -23,6 +23,7 @@ return [
         'Accept',
         'Authorization',
         'Content-Type',
+        'Origin',
         'X-Requested-With',
         'X-CSRF-TOKEN',
         'X-XSRF-TOKEN',

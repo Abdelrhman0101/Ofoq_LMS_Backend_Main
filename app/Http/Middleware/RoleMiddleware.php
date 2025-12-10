@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
@@ -14,22 +13,24 @@ class RoleMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!$request->user()) {
-            return response()->json([
-                'message' => 'Unauthenticated'
-            ], 401);
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        Log::info('RoleMiddleware check: User role is -> ' . $request->user()->role);
-
-        if (strtolower(trim($request->user()->role)) !== strtolower(trim($role))) {
-            return response()->json([
-                'message' => 'Forbidden. You do not have permission to access this resource.'
-            ], 403);
+        // Check if user has any of the required roles using Spatie
+        if ($user->hasAnyRole($roles)) {
+            return $next($request);
         }
 
-        return $next($request);
+        // Fallback: check the legacy 'role' column for backward compatibility
+        if (in_array($user->role, $roles)) {
+            return $next($request);
+        }
+
+        return response()->json(['message' => 'Unauthorized - Insufficient permissions'], 403);
     }
 }

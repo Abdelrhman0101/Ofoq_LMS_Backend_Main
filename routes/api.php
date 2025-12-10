@@ -87,8 +87,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/favorite-courses/{course}', [UserFavoriteCourseController::class, 'store']);
     Route::delete('/user/favorite-courses/{course}', [UserFavoriteCourseController::class, 'destroy']);
 
-    // Admin routes
-    Route::prefix('admin')->middleware('role:admin')->group(function () {
+    // Get current user permissions (for sidebar filtering)
+    Route::get('/user/permissions', [\App\Http\Controllers\Admin\SupervisorController::class, 'myPermissions']);
+
+    // Admin routes (accessible by admin and supervisor based on their permissions)
+    Route::prefix('admin')->middleware('role:admin,supervisor')->group(function () {
         // Courses
         Route::post('/courses', [AdminCourseController::class, 'store']);
         Route::put('/courses/{course}', [AdminCourseController::class, 'update']);
@@ -156,7 +159,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/backups', [BackupController::class, 'index']);
         Route::post('/backups/create', [BackupController::class, 'create']);
         Route::post('/backups/upload', [BackupController::class, 'upload']);
-        Route::post('/backups/validate', [BackupController::class, 'validate']);
+        Route::post('/backups/validate', [BackupController::class, 'validateBackup']);
         Route::post('/backups/restore', [BackupController::class, 'restore']);
         Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');
         Route::delete('/backups/{filename}', [BackupController::class, 'delete'])->where('filename', '.*');
@@ -164,6 +167,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Diploma Certificates Management (Admin)
         Route::get('/diploma-certificates/student', [AdminDiplomaCertificateController::class, 'searchStudentDiplomas']);
         Route::post('/diplomas/{diploma}/certificates/generate', [AdminDiplomaCertificateController::class, 'generateForStudent']);
+
+        // Supervisors Management (Admin only)
+        Route::get('/supervisors', [\App\Http\Controllers\Admin\SupervisorController::class, 'index']);
+        Route::get('/supervisors/permissions', [\App\Http\Controllers\Admin\SupervisorController::class, 'getPermissions']);
+        Route::post('/supervisors', [\App\Http\Controllers\Admin\SupervisorController::class, 'store']);
+        Route::put('/supervisors/{supervisor}/permissions', [\App\Http\Controllers\Admin\SupervisorController::class, 'updatePermissions']);
+        Route::put('/supervisors/{supervisor}/password', [\App\Http\Controllers\Admin\SupervisorController::class, 'updatePassword']);
+        Route::delete('/supervisors/{supervisor}', [\App\Http\Controllers\Admin\SupervisorController::class, 'destroy']);
     });
 
     // User/Student routes (accessible to authenticated users)

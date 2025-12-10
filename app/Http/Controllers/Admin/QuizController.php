@@ -10,11 +10,6 @@ use Illuminate\Http\Request;
 
 class QuizController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Quiz::class, 'quiz');
-    }
-
     public function index(Course $course)
     {
         return QuizResource::collection($course->quizzes);

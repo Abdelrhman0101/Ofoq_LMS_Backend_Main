@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\CourseCertificate;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -95,6 +96,34 @@ class GenerateCertificateJob implements ShouldQueue
                 'footer_text' => 'أكمل بتاريخ',
                 'title_text' => 'شهادة',
             ];
+
+            // --- QR Code Generation ---
+            // Generate verification URL with serial number
+            $verificationUrl = 'https://www.ofuq.academy/verify-certificate?s=' . $serial;
+            
+            // --- QR Code Generation ---
+            // Generate verification URL with serial number
+            $verificationUrl = 'https://www.ofuq.academy/verify-certificate?s=' . $serial;
+            
+            // Generate QR Code using QR Server API (Google Charts is deprecated/unreliable)
+            $qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($verificationUrl);
+            
+            try {
+                // Use Laravel Http client for better reliability and debugging
+                $response = Http::timeout(10)->get($qrApiUrl);
+                
+                if ($response->successful()) {
+                    $certificateData['qrCodeBase64'] = 'data:image/png;base64,' . base64_encode($response->body());
+                } else {
+                    Log::error('Failed to generate QR code from QR Server API. Status: ' . $response->status());
+                    $certificateData['qrCodeBase64'] = '';
+                }
+            } catch (\Exception $qrEx) {
+                Log::error('QR code generation failed (Exception): ' . $qrEx->getMessage());
+                $certificateData['qrCodeBase64'] = '';
+            }
+            // --- End QR Code Generation ---
+
 
             // --- بداية التعديل المصحح ---
             // 1. وضع قيمة افتراضية للمتغير لتجنب خطأ Undefined Variable في حالة عدم وجود الصورة

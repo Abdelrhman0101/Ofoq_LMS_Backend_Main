@@ -122,11 +122,17 @@
         }
 
         /* الفوتر */
+        /* الفوتر (الرقم التسلسلي والتاريخ) - أسفل اليمين (أقرب للمنتصف) */
         .footer-container {
+            position: absolute;
+            bottom: 40px;
+            right: 120px;
+            text-align: right;
             display: flex;
-            justify-content: space-between;
-            margin-top: 25px; /* مسافة تفصل الفوتر عن المحتوى */
-            padding: 0 20px;
+            flex-direction: column;
+            gap: 5px;
+            margin: 0;
+            padding: 0;
         }
 
         .footer-note {
@@ -134,6 +140,24 @@
             color: #2d2e31ff;
             font-weight: 700;
             margin: 0;
+        }
+
+        /* QR Code */
+        .qr-container {
+            position: absolute;
+            bottom: 30px;
+            left: 120px;
+            text-align: center;
+        }
+        .qr-container img {
+            width: 90px;
+            height: 90px;
+        }
+        .qr-label {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+            font-weight: 400;
         }
 
     </style>
@@ -168,6 +192,13 @@
             <p class="footer-note">رقم المسلسل: {{ $serial_number }}</p>
             <p class="footer-note">تاريخ الإصدار: {{ $issued_date }}</p>
         </div>
+
+        @if(!empty($qrCodeBase64))
+        <div class="qr-container">
+            <img src="{{ $qrCodeBase64 }}" alt="QR Code" />
+            <p class="qr-label">امسح للتحقق</p>
+        </div>
+        @endif
     </div>
 </body>
 </html>

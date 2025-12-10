@@ -67,6 +67,8 @@ return [
                 'use_single_transaction' => true,
                 'timeout' => 60 * 5, // 5 minutes
             ],
+            // MySQL client binary path for restore operations
+            'mysql_binary_path' => env('DB_CLIENT_PATH', 'mysql'),
         ],
 
         'mariadb' => [

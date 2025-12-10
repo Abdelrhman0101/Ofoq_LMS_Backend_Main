@@ -49,9 +49,10 @@ class BackupController extends Controller
 
     private function mysqlBinary(): string
     {
-        // Allow overriding mysql client path via env (e.g., C:\laragon\bin\mysql\...\mysql.exe)
-        // Fallback to 'mysql' expecting it to be in PATH
-        return env('DB_CLIENT_PATH', 'mysql');
+        // Read from config (works when config is cached)
+        // Falls back to 'mysql' expecting it to be in PATH
+        $connection = config('database.default', 'mysql');
+        return config("database.connections.{$connection}.mysql_binary_path", 'mysql');
     }
 
     /**
@@ -268,7 +269,7 @@ class BackupController extends Controller
      * Validate an uploaded backup file before accepting it
      * POST /api/admin/backups/validate
      */
-    public function validate(Request $request)
+    public function validateBackup(Request $request)
     {
         try {
             $request->validate([
