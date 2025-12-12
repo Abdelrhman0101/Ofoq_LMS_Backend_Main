@@ -91,11 +91,27 @@ class CourseController extends Controller
             if (empty($validated['is_published'])) {
                 $validated['is_published'] = false;
             }
+            
+            // Debug: Log all uploaded files
+            Log::info('Checking for cover_image upload', [
+                'hasFile' => $request->hasFile('cover_image'),
+                'allFiles' => array_keys($request->allFiles()),
+                'cover_image_in_request' => $request->has('cover_image'),
+            ]);
+            
             if ($request->hasFile('cover_image')) {
                 $image = $request->file('cover_image');
+                Log::info('Cover image file details', [
+                    'originalName' => $image->getClientOriginalName(),
+                    'mimeType' => $image->getClientMimeType(),
+                    'size' => $image->getSize(),
+                    'isValid' => $image->isValid(),
+                ]);
                 $path = $image->store('courses/cover_images', 'public');
                 $validated['cover_image'] = $path;
-Log::info('Cover image stored', ['path' => $path]);
+                Log::info('Cover image stored successfully', ['path' => $path]);
+            } else {
+                Log::warning('No cover_image file detected in request');
             }
 
             Log::info('About to create course', ['data' => $validated]);

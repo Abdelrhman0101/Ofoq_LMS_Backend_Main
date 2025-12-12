@@ -25,6 +25,9 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => $categories,
+            'meta' => [
+                'total' => $categories->count(),
+            ],
         ]);
     }
 

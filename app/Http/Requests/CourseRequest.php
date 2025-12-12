@@ -16,6 +16,33 @@ class CourseRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     * Converts string representations of booleans to actual booleans.
+     */
+    protected function prepareForValidation(): void
+    {
+        $booleanFields = ['is_free', 'is_published'];
+        
+        foreach ($booleanFields as $field) {
+            if ($this->has($field)) {
+                $value = $this->input($field);
+                // Convert '1', '0', 'true', 'false' strings to actual booleans
+                if (is_string($value)) {
+                    $this->merge([
+                        $field => in_array(strtolower($value), ['1', 'true', 'yes'], true),
+                    ]);
+                }
+            }
+        }
+        
+        Log::info('CourseRequest prepareForValidation', [
+            'is_free' => $this->input('is_free'),
+            'is_published' => $this->input('is_published'),
+            'has_cover_image' => $this->hasFile('cover_image'),
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
