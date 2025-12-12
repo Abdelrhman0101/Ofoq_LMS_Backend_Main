@@ -40,8 +40,11 @@ class CourseResource extends JsonResource
             'average_rating'   => $this->when(isset($this->reviews_avg_rating), round($this->reviews_avg_rating, 1)),
 
             // صور الكورس
-            'cover_image'      => $this->cover_image,                                  // القيمة الخام
-            'cover_image_url'  => $this->cover_image_url ?? $mediaUrl($this->cover_image), // URL مضمون (accessor أو helper)
+            // Ensure we don't return false/0 values which cause broken URLs like /storage/0
+            'cover_image'      => $this->cover_image && $this->cover_image !== '0' ? $this->cover_image : null,
+            'cover_image_url'  => ($this->cover_image && $this->cover_image !== '0') 
+                ? ($this->cover_image_url ?? $mediaUrl($this->cover_image)) 
+                : null,
 
             // حالة النشر (للأدمن فقط)
             'is_published'     => $isAdmin ? (bool) $this->is_published : null,

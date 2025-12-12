@@ -137,9 +137,12 @@ class Course extends Model
 
     public function getCoverImageUrlAttribute()
     {
-        return $this->cover_image
-            ? Storage::url($this->cover_image)
-            : null;
+        // Handle cases where cover_image might be false, 0, '0', or empty string
+        if (!$this->cover_image || $this->cover_image === '0' || $this->cover_image === 0) {
+            return null;
+        }
+        
+        return Storage::url($this->cover_image);
     }
     public function scopeSearch($query, $search)
     {

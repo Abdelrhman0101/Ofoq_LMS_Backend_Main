@@ -97,21 +97,40 @@ class CourseController extends Controller
                 'hasFile' => $request->hasFile('cover_image'),
                 'allFiles' => array_keys($request->allFiles()),
                 'cover_image_in_request' => $request->has('cover_image'),
+                'cover_image_value' => $request->input('cover_image'),
             ]);
+            
+            // IMPORTANT: Remove cover_image from validated data first to prevent saving false/0
+            // We will only add it back if a valid file is uploaded
+            unset($validated['cover_image']);
             
             if ($request->hasFile('cover_image')) {
                 $image = $request->file('cover_image');
-                Log::info('Cover image file details', [
-                    'originalName' => $image->getClientOriginalName(),
-                    'mimeType' => $image->getClientMimeType(),
-                    'size' => $image->getSize(),
-                    'isValid' => $image->isValid(),
-                ]);
-                $path = $image->store('courses/cover_images', 'public');
-                $validated['cover_image'] = $path;
-                Log::info('Cover image stored successfully', ['path' => $path]);
+                
+                // Validate the file is actually valid
+                if ($image->isValid()) {
+                    Log::info('Cover image file details', [
+                        'originalName' => $image->getClientOriginalName(),
+                        'mimeType' => $image->getClientMimeType(),
+                        'size' => $image->getSize(),
+                    ]);
+                    
+                    $path = $image->store('courses/cover_images', 'public');
+                    
+                    if ($path) {
+                        $validated['cover_image'] = $path;
+                        Log::info('Cover image stored successfully', ['path' => $path]);
+                    } else {
+                        Log::error('Failed to store cover image - store() returned false');
+                    }
+                } else {
+                    Log::warning('Cover image file is not valid', [
+                        'error' => $image->getError(),
+                        'errorMessage' => $image->getErrorMessage(),
+                    ]);
+                }
             } else {
-                Log::warning('No cover_image file detected in request');
+                Log::info('No cover_image file in request - this is normal if user did not select an image');
             }
 
             Log::info('About to create course', ['data' => $validated]);
@@ -218,13 +237,32 @@ class CourseController extends Controller
             $validated['discount_price'] = null;
         }
 
+        // IMPORTANT: Remove cover_image from validated data to prevent overwriting with false/0
+        // We only update it if a valid new file is uploaded
+        unset($validated['cover_image']);
+
         if ($request->hasFile('cover_image')) {
-            if ($course->cover_image && Storage::disk('public')->exists($course->cover_image)) {
-                Storage::disk('public')->delete($course->cover_image);
-            }
             $image = $request->file('cover_image');
-            $path = $image->store('courses/cover_images', 'public');
-            $validated['cover_image'] = $path;
+            
+            if ($image->isValid()) {
+                // Delete old image if exists
+                if ($course->cover_image && Storage::disk('public')->exists($course->cover_image)) {
+                    Storage::disk('public')->delete($course->cover_image);
+                }
+                
+                $path = $image->store('courses/cover_images', 'public');
+                
+                if ($path) {
+                    $validated['cover_image'] = $path;
+                    Log::info('Cover image updated successfully', ['path' => $path]);
+                } else {
+                    Log::error('Failed to store cover image during update');
+                }
+            } else {
+                Log::warning('Cover image file is not valid during update', [
+                    'error' => $image->getError(),
+                ]);
+            }
         }
 
         $course->update($validated);
