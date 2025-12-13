@@ -69,7 +69,7 @@ class InstructorController extends Controller
             'title' => ['required', 'string', 'max:255'],
             // 'email' => ['nullable', 'email', 'max:255', Rule::unique('instructors', 'email')],
             'bio' => ['nullable', 'string', 'max:2000'],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'max:10240'],
         ]);
 
         if ($request->hasFile('image')) {
@@ -94,7 +94,7 @@ class InstructorController extends Controller
             'title' => ['sometimes', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('instructors', 'email')->ignore($instructor->id)],
             'bio' => ['nullable', 'string', 'max:2000'],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'max:10240'],
         ]);
 
         if ($request->hasFile('image')) {

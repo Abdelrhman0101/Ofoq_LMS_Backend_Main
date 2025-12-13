@@ -271,7 +271,7 @@ class AuthController extends Controller
     {
         // Validate the incoming request
         $request->validate([
-            'profile_picture' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg|max:10240',
         ]);
 
         // Store the uploaded file in the public disk under profile_pictures folder
