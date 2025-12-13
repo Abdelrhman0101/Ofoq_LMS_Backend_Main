@@ -51,6 +51,7 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'nationality' => $user->nationality,
                 'role' => $user->role,
+                'profile_picture' => $user->profile_picture,
             ], fn($value) => !is_null($value)),
             'token' => $token
         ], 201);
@@ -92,6 +93,7 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'nationality' => $user->nationality,
                 'role' => $user->role,
+                'profile_picture' => $user->profile_picture,
             ], fn($value) => !is_null($value)),
             'token' => $token
         ], 201);
