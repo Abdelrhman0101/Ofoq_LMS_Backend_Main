@@ -1,14 +1,169 @@
+# دليل تطبيق نظام النسخ الاحتياطي (Backup System Implementation Guide)
+
+هذا الدليل يلخص خطوات بناء نظام النسخ الاحتياطي كما هو مطبق في مشروع Ofoq LMS، لسهولة نقله وتطبيقه في مشاريع أخرى.
+
+## 1. تثبيت الحزمة (Package Installation)
+يعتمد النظام على حزمة `spatie/laravel-backup`.
+
+```bash
+composer require spatie/laravel-backup
+```
+
+بعد التثبيت، قم بنشر ملف الإعدادات:
+```bash
+php artisan vendor:publish --provider="Spatie\Backup\BackupServiceProvider"
+```
+
+## 2. ضبط الإعدادات (`config/backup.php`)
+قم بتعديل الملف `config/backup.php` لضبط ما يلي:
+
+### أ. تحديد المصدر (Source)
+تأكد من استثناء المجلدات الكبيرة وغير الضرورية لتوفير المساحة، وإدراج مسارات الصور الهامة بشكل صريح.
+
+```php
+'source' => [
+    'files' => [
+        'include' => [
+            base_path(),
+            storage_path('app/public'), // التأكد من شمول ملفات وصور المستخدمين
+        ],
+        'exclude' => [
+            base_path('vendor'),
+            base_path('node_modules'),
+            base_path('storage/framework'),
+            base_path('storage/logs'),
+            base_path('public/hot'),
+        ],
+        // ...
+    ],
+    'databases' => [
+        'mysql',
+    ],
+],
+```
+
+### ب. سياسة التنظيف (Cleanup Strategy)
+ضبط الاحتفاظ بالنسخ لفترات زمنية محددة (يومي، أسبوعي، شهري).
+
+```php
+'cleanup' => [
+    'default_strategy' => [
+        'keep_all_backups_for_days' => 30,
+        'keep_daily_backups_for_days' => 30,
+        'keep_weekly_backups_for_weeks' => 4,
+        'keep_monthly_backups_for_months' => 1,
+        'keep_yearly_backups_for_years' => 2,
+        'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
+    ],
+],
+```
+
+## 3. إعدادات قاعدة البيانات (`config/database.php`)
+لضمان عمل `mysqldump` بشكل صحيح، أضف إعدادات الـ dump داخل اتصال `mysql`:
+
+```php
+'mysql' => [
+    // ... الإعدادات الأخرى
+    
+    // إعدادات النسخ الاحتياطي
+    'dump' => [
+        'dump_binary_path' => env('DB_DUMP_PATH', ''), // مسار ملفات mysqldump
+        'use_single_transaction' => true,
+        'timeout' => 60 * 5, // 5 دقائق
+    ],
+],
+```
+
+### ضبط متغيرات البيئة (.env)
+هام جداً في بيئة Windows أو السيرفرات التي لا تكون فيها أدوات MySQL مضافة إلى الـ PATH.
+
+```env
+# Backup Configurations
+# مسار المجلد الذي يحتوي على mysqldump (ضروري لإنشاء النسخ)
+DB_DUMP_PATH="C:/xampp/mysql/bin"
+
+# مسار ملف mysql التنفيذي بالكامل (ضروري لاسترجاع النسخ)
+DB_CLIENT_PATH="C:/xampp/mysql/bin/mysql.exe"
+```
+
+## 4. جدولة المهام (Scheduling)
+في ملف `routes/console.php` (أو `app/Console/Kernel.php` في النسخ القديمة)، أضف الأوامر التالية لتعمل تلقائياً:
+
+```php
+use Illuminate\Support\Facades\Schedule;
+
+// تشغيل النسخ الاحتياطي كل 3 أيام الساعة 2 صباحاً
+Schedule::command('backup:run')->cron('0 2 */3 * *');
+
+// تنظيف النسخ القديمة يومياً الساعة 3 صباحاً
+Schedule::command('backup:clean')->daily()->at('03:00');
+
+// مراقبة حالة النسخ يومياً الساعة 4 صباحاً
+Schedule::command('backup:monitor')->daily()->at('04:00');
+```
+
+## 5. إنشاء نموذج سجل النسخ الاحتياطي (`BackupHistory`)
+
+لتتبع العمليات بشكل منظم بدلاً من الاعتماد فقط على ملفات الـ Log، يفضل إنشاء Model وجدول قاعدة بيانات.
+
+**Migration:**
+```bash
+php artisan make:model BackupHistory -m
+```
+
+```php
+Schema::create('backup_histories', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('user_id')->nullable(); // من قام بالعملية
+    $table->string('action'); // create, restore, delete, download
+    $table->string('status'); // success, failed
+    $table->string('filename')->nullable();
+    $table->text('details')->nullable(); // رسائل الخطأ أو تفاصيل إضافية
+    $table->string('ip_address')->nullable();
+    $table->timestamps();
+});
+```
+
+**Model (`App\Models\BackupHistory`):**
+```php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class BackupHistory extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'action',
+        'status',
+        'filename',
+        'details',
+        'ip_address'
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+```
+
+## 6. المتحكم الكامل (`BackupController`)
+
+إليك الكود الكامل للمتحكم، مع دمج وظيفة `logActivity` لتخزين البيانات في قاعدة البيانات باستخدام `BackupHistory`.
+
+```php
 <?php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\BackupHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Models\BackupHistory; // تأكد من استيراد الموديل
 
 class BackupController extends Controller
 {
@@ -57,7 +212,7 @@ class BackupController extends Controller
     }
 
     /**
-     * Log backup activity for audit trail
+     * Log backup activity for audit trail (Database + File Log)
      */
     private function logActivity(string $action, array $context = []): void
     {
@@ -66,31 +221,29 @@ class BackupController extends Controller
             $status = 'failed';
         }
 
-        /** @var \App\Models\User|null $user */
-        $user = request()->user();
-
+        // 1. File Log
         $logContext = array_merge([
-            'user_id' => $user?->id,
-            'user_email' => $user?->email ?? 'N/A',
+            'user_id' => auth()->id(),
+            'user_email' => auth()->user()?->email,
             'ip' => request()->ip(),
             'timestamp' => now()->toIso8601String(),
             'status' => $status,
         ], $context);
-
+        
         if ($status === 'failed') {
             Log::channel('daily')->error("[Backup] $action", $logContext);
         } else {
             Log::channel('daily')->info("[Backup] $action", $logContext);
         }
 
-        // Database History
+        // 2. Database History
         try {
             BackupHistory::create([
-                'user_id' => $user?->id,
+                'user_id' => auth()->id(),
                 'action' => $action,
                 'status' => $status,
                 'filename' => $context['filename'] ?? null,
-                'details' => json_encode($logContext), // Save full context including email
+                'details' => json_encode($context),
                 'ip_address' => request()->ip(),
             ]);
         } catch (\Exception $e) {
@@ -100,7 +253,6 @@ class BackupController extends Controller
 
     /**
      * Validate backup file integrity
-     * Returns array with 'valid' boolean and 'errors' array
      */
     private function validateBackupFile(string $absolutePath): array
     {
@@ -172,7 +324,6 @@ class BackupController extends Controller
         try {
             $this->logActivity('Pre-restore backup started');
             
-            // Run backup with a special naming convention
             Artisan::call('backup:run', ['--only-db' => true]);
             $output = Artisan::output();
             
@@ -194,7 +345,6 @@ class BackupController extends Controller
 
     /**
      * List all backups
-     * GET /api/admin/backups
      */
     public function index()
     {
@@ -202,9 +352,7 @@ class BackupController extends Controller
             $disk = $this->backupDisk();
             $backupDirectory = $this->backupDir();
             
-            // Get all backup files
             $files = $disk->files($backupDirectory);
-            // Only include zip files
             $files = array_values(array_filter($files, function ($file) {
                 return Str::endsWith($file, '.zip');
             }));
@@ -237,7 +385,6 @@ class BackupController extends Controller
 
     /**
      * Create a new backup manually
-     * POST /api/admin/backups/create
      */
     public function create()
     {
@@ -266,7 +413,6 @@ class BackupController extends Controller
 
     /**
      * Download a backup file
-     * GET /api/admin/backups/{filename}/download
      */
     public function download($filename)
     {
@@ -275,59 +421,20 @@ class BackupController extends Controller
             $path = $this->backupPath($filename);
 
             if (!$disk->exists($path)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Backup file not found',
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Backup file not found'], 404);
             }
 
-            $this->logActivity('Backup downloaded', ['filename' => $filename]);
+            $this->logActivity('Backup downloaded', 'success', ['filename' => $filename]);
 
-            return response()->download($disk->path($path));
+            return $disk->download($path);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Download failed: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Download failed: ' . $e->getMessage()], 500);
         }
     }
 
     /**
-     * Validate an uploaded backup file before accepting it
-     * POST /api/admin/backups/validate
-     */
-    public function validateBackup(Request $request)
-    {
-        try {
-            $request->validate([
-                'backup_file' => 'required|file|mimes:zip|max:512000',
-            ]);
-
-            $file = $request->file('backup_file');
-            $tempPath = $file->getRealPath();
-            
-            $validation = $this->validateBackupFile($tempPath);
-            
-            return response()->json([
-                'success' => $validation['valid'],
-                'valid' => $validation['valid'],
-                'errors' => $validation['errors'],
-                'file_size' => $this->formatBytes($validation['file_size'] ?? 0),
-                'sql_size' => $this->formatBytes($validation['sql_size'] ?? 0),
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Upload/Import a backup file with validation
-     * POST /api/admin/backups/upload
+     * Upload/Import a backup file
      */
     public function upload(Request $request)
     {
@@ -340,10 +447,9 @@ class BackupController extends Controller
             $filename = $file->getClientOriginalName();
             $tempPath = $file->getRealPath();
             
-            // Validate backup file before storing
             $validation = $this->validateBackupFile($tempPath);
             if (!$validation['valid']) {
-                $this->logActivity('Backup upload rejected - validation failed', [
+                $this->logActivity('Backup upload rejected', 'error', [
                     'filename' => $filename,
                     'errors' => $validation['errors'],
                 ]);
@@ -354,10 +460,9 @@ class BackupController extends Controller
                 ], 422);
             }
             
-            // Store in backup directory
             $path = $file->storeAs($this->backupDir(), $this->sanitizeFilename($filename), $this->backupDiskName());
             
-            $this->logActivity('Backup uploaded', [
+            $this->logActivity('Backup uploaded', 'success', [
                 'filename' => $filename,
                 'path' => $path,
                 'size' => $file->getSize(),
@@ -365,27 +470,18 @@ class BackupController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم رفع النسخة الاحتياطية بنجاح وتم التحقق من صحتها',
+                'message' => 'تم رفع النسخة الاحتياطية بنجاح',
                 'filename' => $filename,
-                'path' => $path,
-                'validation' => [
-                    'file_size' => $this->formatBytes($validation['file_size']),
-                    'sql_size' => $this->formatBytes($validation['sql_size']),
-                ],
             ]);
 
         } catch (\Exception $e) {
-            $this->logActivity('Backup upload failed', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Upload failed: ' . $e->getMessage(),
-            ], 500);
+            $this->logActivity('Backup upload failed', 'error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Upload failed: ' . $e->getMessage()], 500);
         }
     }
 
     /**
      * Delete a specific backup
-     * DELETE /api/admin/backups/{filename}
      */
     public function delete($filename)
     {
@@ -394,80 +490,49 @@ class BackupController extends Controller
             $path = $this->backupPath($filename);
             
             if (!$disk->exists($path)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Backup file not found',
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Backup file not found'], 404);
             }
 
             $disk->delete($path);
             
-            $this->logActivity('Backup deleted', ['filename' => $filename]);
+            $this->logActivity('Backup deleted', 'success', ['filename' => $filename]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Backup deleted successfully',
-            ]);
+            return response()->json(['success' => true, 'message' => 'Backup deleted successfully']);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Delete failed: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Delete failed: ' . $e->getMessage()], 500);
         }
     }
 
     /**
      * Restore database from backup
-     * POST /api/admin/backups/restore
-     * 
-     * WARNING: This is a dangerous operation!
-     * This will:
-     * 1. Validate the backup file
-     * 2. Create an automatic backup of current state
-     * 3. Restore from the selected backup
      */
     public function restore(Request $request)
     {
         $dumpPath = null;
         
         try {
-            // Add extra confirmation
-            $confirmationCode = $request->input('confirmation_code');
             $filename = $this->sanitizeFilename((string) $request->input('filename'));
             
-            if ($confirmationCode !== 'RESTORE-CONFIRM') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid confirmation code',
-                ], 400);
-            }
-
             if (!$filename) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Filename is required',
-                ], 400);
+                return response()->json(['success' => false, 'message' => 'Filename is required'], 400);
             }
 
             $disk = $this->backupDisk();
             $relativePath = $this->backupPath($filename);
 
             if (!$disk->exists($relativePath)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Backup file not found',
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Backup file not found'], 404);
             }
 
             $absolutePath = $disk->path($relativePath);
             
-            $this->logActivity('Restore initiated', ['filename' => $filename]);
+            $this->logActivity('Restore initiated', 'info', ['filename' => $filename]);
 
-            // Step 1: Validate the backup file before proceeding
+            // 1. Validate
             $validation = $this->validateBackupFile($absolutePath);
             if (!$validation['valid']) {
-                $this->logActivity('Restore aborted - backup validation failed', [
+                $this->logActivity('Restore aborted - validation failed', 'error', [
                     'filename' => $filename,
                     'errors' => $validation['errors'],
                 ]);
@@ -478,17 +543,16 @@ class BackupController extends Controller
                 ], 422);
             }
 
-            // Step 2: Create automatic backup of current state before restore
+            // 2. Pre-restore Backup
             $preRestoreBackup = $this->createPreRestoreBackup();
             if (!$preRestoreBackup['success']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'فشل إنشاء نسخة احتياطية من الحالة الحالية قبل الاسترجاع. تم إلغاء العملية للحفاظ على البيانات.',
-                    'pre_restore_error' => $preRestoreBackup['message'],
+                    'message' => 'فشل إنشاء نسخة احتياطية من الحالة الحالية. تم إلغاء العملية.',
                 ], 500);
             }
 
-            // Step 3: Extract and restore
+            // 3. Extract and Restore
             $zip = new \ZipArchive;
             if ($zip->open($absolutePath) === TRUE) {
                 $dbDumpFile = null;
@@ -501,13 +565,11 @@ class BackupController extends Controller
                 }
 
                 if ($dbDumpFile) {
-                    // Ensure temp directory exists
                     $tempDisk = Storage::disk('local');
                     $tempDisk->makeDirectory('temp');
                     $zip->extractTo($tempDisk->path('temp'));
                     $zip->close();
 
-                    // Restore database - read from configured connection to avoid env() issues when config is cached
                     $connection = config('database.default', 'mysql');
                     $dbConfig = (array) config("database.connections.$connection", []);
                     $database = $dbConfig['database'] ?? env('DB_DATABASE');
@@ -519,7 +581,6 @@ class BackupController extends Controller
 
                     $dumpPath = $tempDisk->path('temp/' . $dbDumpFile);
                     
-                    // Build mysql command (capture stderr with 2>&1 for diagnostics)
                     $mysql = escapeshellcmd($this->mysqlBinary());
                     $command = $mysql
                         . ' --host=' . escapeshellarg($host)
@@ -534,66 +595,94 @@ class BackupController extends Controller
                     exec($command, $output, $returnVar);
 
                     if ($returnVar === 0) {
-                        $this->logActivity('Restore completed successfully', ['filename' => $filename]);
+                        $this->logActivity('Restore completed', 'success', ['filename' => $filename]);
                         return response()->json([
                             'success' => true,
-                            'message' => 'تم استرجاع قاعدة البيانات بنجاح. تم إنشاء نسخة احتياطية تلقائية من الحالة السابقة.',
+                            'message' => 'تم استرجاع قاعدة البيانات بنجاح.',
                             'pre_restore_backup' => true,
                         ]);
                     } else {
-                        $this->logActivity('Restore failed - mysql error', [
+                        $this->logActivity('Restore failed - mysql error', 'error', [
                             'filename' => $filename,
-                            'return_var' => $returnVar,
                             'output' => implode("\n", $output ?? []),
                         ]);
                         return response()->json([
                             'success' => false,
-                            'message' => 'فشل استرجاع قاعدة البيانات. لا تقلق، تم إنشاء نسخة احتياطية من الحالة السابقة.',
+                            'message' => 'فشل استرجاع قاعدة البيانات.',
                             'error_output' => implode("\n", $output ?? []),
-                            'password_provided' => !empty($password),
-                            'pre_restore_backup' => true,
                         ], 500);
                     }
                 }
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'فشل فك ضغط ملف النسخة الاحتياطية',
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'فشل فك ضغط ملف النسخة الاحتياطية'], 500);
 
         } catch (\Exception $e) {
-            $this->logActivity('Restore failed - exception', [
-                'filename' => $filename ?? 'unknown',
-                'error' => $e->getMessage(),
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Restore failed: ' . $e->getMessage(),
-            ], 500);
+            $this->logActivity('Restore failed - exception', 'error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Restore failed: ' . $e->getMessage()], 500);
         } finally {
-            // Always clean up temp file
             if ($dumpPath && file_exists($dumpPath)) {
                 unlink($dumpPath);
             }
         }
     }
-
-    /**
-     * Helper: Format bytes to human readable
-     */
+    
     private function formatBytes($bytes, $precision = 2)
     {
-        if ($bytes <= 0) {
-            return '0 B';
-        }
-        
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
-            $bytes /= 1024;
-        }
-
-        return round($bytes, $precision) . ' ' . $units[$i];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }
+```
+
+## 7. تعريف المسارات (Routes)
+في `routes/api.php` أو `routes/admin.php`:
+
+```php
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/backups', [BackupController::class, 'index']);
+    Route::post('/backups/create', [BackupController::class, 'create']);
+    Route::post('/backups/upload', [BackupController::class, 'upload']);
+    Route::post('/backups/restore', [BackupController::class, 'restore']);
+    Route::get('/backups/{filename}/download', [BackupController::class, 'download']);
+    Route::delete('/backups/{filename}', [BackupController::class, 'delete']);
+});
+```
+
+## 8. حل المشاكل الشائعة (Troubleshooting)
+
+### خطأ: `Can't create TCP/IP socket (10106)`
+هذا الخطأ شائع جداً في بيئة Windows عند استخدام `mysqldump`.
+
+**الحل:**
+1. افتح ملف `.env`.
+2. غيّر قيمة `DB_HOST` من `localhost` إلى `127.0.0.1`.
+   ```env
+   DB_HOST=127.0.0.1
+   ```
+   استخدام عنوان IP بدلاً من الاسم يجبر النظام على استخدام TCP/IP بشكل صحيح.
+
+### خطأ: `The dump process failed with a none successful exitcode`
+غالباً بسبب عدم قدرة النظام على العثور على `mysqldump`.
+
+**الحل:**
+1. تأكد من مسار `mysqldump` على جهازك.
+2. أضف المسار في ملف `.env` (تأكد من استخدام `forward slashes /`):
+   ```env
+   DB_DUMP_PATH="C:/laragon/bin/mysql/mysql-8.0.30-winx64/bin"
+   ```
+3. تأكد من أن ملف `config/database.php` يقرأ هذا المتغير:
+   ```php
+   'dump' => [
+       'dump_binary_path' => env('DB_DUMP_PATH', ''),
+       // ...
+   ],
+   ```
+
+## ملاحظات إضافية
+*   **الأمان:** تأكد من أن المجلد الذي تُحفظ فيه النسخ (`storage/app/Laravel`) غير متاح للوصول العام (ليس داخل `public`).
+*   **الصلاحيات:** تأكد من أن مستخدم الويب (www-data) لديه صلاحيات الكتابة والقراءة على مجلدات الـ storage وتشغيل أوامر الـ shell.

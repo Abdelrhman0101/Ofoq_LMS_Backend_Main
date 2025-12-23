@@ -15,6 +15,9 @@ use Illuminate\Http\Request;
 use App\Models\User;
 
 
+use Illuminate\Support\Facades\Event;
+use App\Listeners\BackupEventSubscriber;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -30,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::subscribe(BackupEventSubscriber::class);
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(1000)->by(optional($request->user())->id ?: $request->ip());
         });
