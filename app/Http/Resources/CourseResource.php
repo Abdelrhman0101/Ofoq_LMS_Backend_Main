@@ -94,10 +94,16 @@ class CourseResource extends JsonResource
 
             // مؤشر وجود اختبار نهائي
             'has_final_exam' => $this->whenLoaded('finalExam', function () {
-                return $this->finalExam !== null;
+                // التحقق من وجود الاختبار النهائي ومن وجود أسئلة فيه
+                if ($this->finalExam === null) {
+                    return false;
+                }
+                // التحقق من عدد الأسئلة
+                $questionsCount = $this->finalExam->questions()->count();
+                return $questionsCount > 0;
             }, function () {
-                // fallback: check if finalExam relation exists
-                return $this->relationLoaded('finalExam') ? ($this->finalExam !== null) : null;
+                // fallback: if finalExam not loaded, return null instead of checking
+                return null;
             }),
 
             // علاقات (تُحمّل عند الحاجة)
