@@ -15,6 +15,9 @@ class DiplomaEligibilityService
     /**
      * Calculate diploma completion percentage for a student
      * Formula: (passed courses in diploma / total diploma courses) * 100
+     * 
+     * Courses without final exams are considered completed if progress_percentage = 100
+     * Courses with final exams require both completion and passing score >= 60
      */
     public function calculateCompletionPercentage(User $user, CategoryOfCourse $diploma): float
     {
@@ -23,12 +26,27 @@ class DiplomaEligibilityService
             return 0.0;
         }
 
+        // Get completed courses - including those without final exams
         $completedCourses = UserCourse::where('user_id', $user->id)
             ->whereHas('course', function (Builder $query) use ($diploma) {
                 $query->where('category_id', $diploma->id);
             })
             ->where('status', 'completed')
-            ->where('final_exam_score', '>=', 60)
+            ->where(function ($query) {
+                // Either: course has no final exam (just check completion)
+                $query->whereHas('course', function ($q) {
+                    $q->whereDoesntHave('finalExam');
+                })
+                // Or: course has final exam with passing score >= 60
+                ->orWhere(function ($q) {
+                    $q->whereHas('course', function ($courseQuery) {
+                        $courseQuery->whereHas('finalExam', function ($examQuery) {
+                            $examQuery->has('questions'); // Only count if exam has questions
+                        });
+                    })
+                    ->where('final_exam_score', '>=', 60);
+                });
+            })
             ->count();
 
         // Use 2-decimal precision to preserve exact 100% when fully completed
@@ -113,13 +131,27 @@ class DiplomaEligibilityService
             return false;
         }
 
-        // Get number of completed courses with passing grade
+        // Get number of completed courses - including those without final exams
         $completedCourses = UserCourse::where('user_id', $user->id)
             ->whereHas('course', function (Builder $query) use ($diploma) {
                 $query->where('category_id', $diploma->id);
             })
             ->where('status', 'completed')
-            ->where('final_exam_score', '>=', 60)
+            ->where(function ($query) {
+                // Either: course has no final exam (just check completion)
+                $query->whereHas('course', function ($q) {
+                    $q->whereDoesntHave('finalExam');
+                })
+                // Or: course has final exam with passing score >= 60
+                ->orWhere(function ($q) {
+                    $q->whereHas('course', function ($courseQuery) {
+                        $courseQuery->whereHas('finalExam', function ($examQuery) {
+                            $examQuery->has('questions'); // Only count if exam has questions
+                        });
+                    })
+                    ->where('final_exam_score', '>=', 60);
+                });
+            })
             ->count();
 
         // Student is eligible if they completed all courses
@@ -146,7 +178,21 @@ class DiplomaEligibilityService
                 $query->where('category_id', $diploma->id);
             })
             ->where('status', 'completed')
-            ->where('final_exam_score', '>=', 60)
+            ->where(function ($query) {
+                // Either: course has no final exam (just check completion)
+                $query->whereHas('course', function ($q) {
+                    $q->whereDoesntHave('finalExam');
+                })
+                // Or: course has final exam with passing score >= 60
+                ->orWhere(function ($q) {
+                    $q->whereHas('course', function ($courseQuery) {
+                        $courseQuery->whereHas('finalExam', function ($examQuery) {
+                            $examQuery->has('questions'); // Only count if exam has questions
+                        });
+                    })
+                    ->where('final_exam_score', '>=', 60);
+                });
+            })
             ->count();
 
         $existingCertificate = DiplomaCertificate::where('user_id', $user->id)

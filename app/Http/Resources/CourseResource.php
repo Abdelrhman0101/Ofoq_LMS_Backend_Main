@@ -92,6 +92,20 @@ class CourseResource extends JsonResource
             'lessons_count'  => $this->lessons_count ?? null,
             'reviews_count'  => $this->reviews_count ?? null,
 
+            // مؤشر وجود اختبار نهائي
+            'has_final_exam' => $this->whenLoaded('finalExam', function () {
+                // التحقق من وجود الاختبار النهائي ومن وجود أسئلة فيه
+                if ($this->finalExam === null) {
+                    return false;
+                }
+                // التحقق من عدد الأسئلة
+                $questionsCount = $this->finalExam->questions()->count();
+                return $questionsCount > 0;
+            }, function () {
+                // fallback: if finalExam not loaded, return null instead of checking
+                return null;
+            }),
+
             // علاقات (تُحمّل عند الحاجة)
             'chapters' => ChapterResource::collection($this->whenLoaded('chapters')),
             'reviews'  => ReviewResource::collection($this->whenLoaded('reviews')),

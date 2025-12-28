@@ -165,13 +165,30 @@ class StatsController extends Controller
                 ->orderByDesc('students_count')
                 ->get();
 
-            // نعيد الاسم بالعربية وعدد الطلاب لكل جنسية
-            $data = $distribution->map(function ($row) {
-                return [
-                    'country_ar' => $row->nationality,
-                    'students_count' => (int) $row->students_count,
-                ];
-            });
+            // تطبيع الجنسيات وجمع المتكررة (للتعامل مع المسافات والتشكيل)
+            $normalized = [];
+            foreach ($distribution as $row) {
+                // تطبيع: إزالة المسافات الزائدة والتشكيل
+                $cleanName = preg_replace('/\s+/', ' ', trim($row->nationality));
+                // إزالة التشكيل العربي
+                $cleanName = preg_replace('/[\x{064B}-\x{0652}\x{0640}]/u', '', $cleanName);
+                
+                if (!isset($normalized[$cleanName])) {
+                    $normalized[$cleanName] = 0;
+                }
+                $normalized[$cleanName] += (int) $row->students_count;
+            }
+
+            // تحويل إلى array وترتيب تنازلياً
+            $data = collect($normalized)
+                ->map(function ($count, $country) {
+                    return [
+                        'country_ar' => $country,
+                        'students_count' => $count,
+                    ];
+                })
+                ->sortByDesc('students_count')
+                ->values();
 
             return response()->json([
                 'success' => true,
