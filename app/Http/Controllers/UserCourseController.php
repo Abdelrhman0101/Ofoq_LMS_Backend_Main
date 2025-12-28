@@ -52,7 +52,8 @@ class UserCourseController extends Controller
                     ->field($request->input('field'))
                     ->sort($request->input('sort'))
                     ->withCount(['chapters', 'lessons', 'reviews'])
-                    ->withAvg('reviews', 'rating');
+                    ->withAvg('reviews', 'rating')
+                    ->with('finalExam'); // تحميل علاقة الاختبار النهائي
             }])
             ->orderBy('created_at', 'desc') // Ensure consistent ordering
             ->paginate($perPage);

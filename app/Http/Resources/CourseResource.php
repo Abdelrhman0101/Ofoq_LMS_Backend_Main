@@ -92,6 +92,14 @@ class CourseResource extends JsonResource
             'lessons_count'  => $this->lessons_count ?? null,
             'reviews_count'  => $this->reviews_count ?? null,
 
+            // مؤشر وجود اختبار نهائي
+            'has_final_exam' => $this->whenLoaded('finalExam', function () {
+                return $this->finalExam !== null;
+            }, function () {
+                // fallback: check if finalExam relation exists
+                return $this->relationLoaded('finalExam') ? ($this->finalExam !== null) : null;
+            }),
+
             // علاقات (تُحمّل عند الحاجة)
             'chapters' => ChapterResource::collection($this->whenLoaded('chapters')),
             'reviews'  => ReviewResource::collection($this->whenLoaded('reviews')),
