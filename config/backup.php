@@ -16,6 +16,7 @@ return [
                  */
                 'include' => [
                     base_path(),
+                    storage_path('app/public'), // Explicitly include user uploads
                 ],
 
                 /*
