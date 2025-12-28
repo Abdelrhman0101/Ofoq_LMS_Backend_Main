@@ -173,7 +173,7 @@ class BackupController extends Controller
             $this->logActivity('Pre-restore backup started');
             
             // Run backup with a special naming convention
-            Artisan::call('backup:run', ['--only-db' => true]);
+            Artisan::call('backup:run');
             $output = Artisan::output();
             
             $this->logActivity('Pre-restore backup completed', ['output' => $output]);
@@ -244,7 +244,7 @@ class BackupController extends Controller
         try {
             $this->logActivity('Manual backup initiated');
             
-            Artisan::call('backup:run', ['--only-db' => true]);
+            Artisan::call('backup:run');
             $output = Artisan::output();
             
             $this->logActivity('Manual backup completed', ['output' => $output]);
