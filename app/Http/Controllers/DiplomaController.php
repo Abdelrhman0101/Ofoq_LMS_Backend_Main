@@ -24,6 +24,10 @@ class DiplomaController extends Controller
                 $q->where('name', 'LIKE', "%{$search}%")
                   ->orWhere('description', 'LIKE', "%{$search}%");
             })
+            ->when($request->has('section_id'), function ($q) use ($request) {
+                $q->where('section_id', $request->input('section_id'));
+            })
+            ->with(['section', 'courses'])
             ->withCount('courses');
 
         if ($sort === 'latest') {

@@ -23,6 +23,7 @@ class CategoryOfCourse extends Model
         'cover_image',
         'display_order',
         'total_views',
+        'section_id',
     ];
 
     protected $casts = [
@@ -43,8 +44,10 @@ class CategoryOfCourse extends Model
         parent::boot();
 
         static::saving(function (self $model) {
-            if (empty($model->slug) && !empty($model->name)) {
-                $base = Str::slug($model->name);
+            // تحديث الـ slug إذا كان فارغاً أو إذا تغير الاسم
+            if (empty($model->slug) || $model->isDirty('name')) {
+                // استبدال المسافات بشرطات والحفاظ على الحروف العربية
+                $base = preg_replace('/\s+/u', '-', trim($model->name));
                 $slug = $base;
                 $i = 1;
                 while (self::where('slug', $slug)->where('id', '!=', $model->id ?? 0)->exists()) {
@@ -53,6 +56,11 @@ class CategoryOfCourse extends Model
                 $model->slug = $slug;
             }
         });
+    }
+
+    public function section()
+    {
+        return $this->belongsTo(Section::class, 'section_id');
     }
 
     public function courses()
@@ -80,6 +88,7 @@ class CategoryOfCourse extends Model
     {
         return $this->hasMany(DiplomaCertificate::class, 'diploma_id');
     }
+
 
     /**
      * Get total views from all courses in this diploma

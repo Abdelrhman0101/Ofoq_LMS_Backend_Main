@@ -32,6 +32,12 @@ class CategoryDetailsResource extends JsonResource
             'cover_image' => $this->cover_image,
             'cover_image_url' => $this->cover_image_url ?? $mediaUrl($this->cover_image),
             'display_order' => $this->display_order,
+            'section' => $this->whenLoaded('section', function () {
+                return [
+                    'id' => $this->section->id,
+                    'name' => $this->section->name,
+                ];
+            }),
 
             // إحصاءات
             'courses_count' => $this->courses_count ?? $this->whenLoaded('courses', fn() => $this->courses->count()),

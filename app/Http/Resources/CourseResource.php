@@ -87,6 +87,14 @@ class CourseResource extends JsonResource
                     : null;
             }),
 
+            'section' => $this->whenLoaded('section', function () {
+                return [
+                    'id'   => $this->section->id,
+                    'name' => $this->section->name,
+                    'slug' => $this->section->slug,
+                ];
+            }),
+
             // Counts
             'chapters_count' => $this->chapters_count ?? $this->whenLoaded('chapters', $this->chapters->count()),
             'lessons_count'  => $this->lessons_count ?? null,

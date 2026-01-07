@@ -28,6 +28,7 @@ class CourseController extends Controller
             'chapters.lessons.quiz',
             'reviews.user',
             'instructor',
+            'section',
         ])
             // Order by rank ascending, NULLs last, then by id
             ->orderByRaw('`rank` IS NULL')
@@ -205,6 +206,7 @@ class CourseController extends Controller
                 'chapters.lessons.quiz.questions',
                 'reviews.user',
                 'instructor',
+                'section',
             ])
             ->find($id);
 

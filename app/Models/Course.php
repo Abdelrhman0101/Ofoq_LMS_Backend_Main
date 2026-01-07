@@ -54,6 +54,11 @@ class Course extends Model
         return $this->belongsTo(\App\Models\CategoryOfCourse::class, 'category_id');
     }
 
+    public function section()
+    {
+        return $this->belongsTo(Section::class, 'section_id');
+    }
+
 
     public function reviews()
     {
@@ -131,7 +136,8 @@ class Course extends Model
         'reviews_count',
         'cover_image',
         'rank',
-        'total_views'
+        'total_views',
+        'section_id',
     ];
     protected $appends = ['cover_image_url'];
 

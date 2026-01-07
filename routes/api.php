@@ -31,10 +31,14 @@ use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\LessonProgressController;
+use App\Http\Controllers\Admin\SectionController;
 
 // Public stats routes
 Route::get('/stats/general', [StatsController::class, 'getGeneralStats']);
 Route::get('/stats/students-by-country', [StatsController::class, 'getStudentsByCountry']);
+
+// Public section routes
+Route::get('/sections', [SectionController::class, 'index']);
 
 // Public course routes
 Route::get('/allCourses', [CourseController::class, 'search']);
@@ -120,6 +124,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{id}', [CategoryController::class, 'update']);
         Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+
+        // Sections (Admin)
+        Route::get('/sections', [SectionController::class, 'index']);
+        Route::get('/sections/{section}', [SectionController::class, 'show']);
+        Route::post('/sections', [SectionController::class, 'store']);
+        Route::put('/sections/{section}', [SectionController::class, 'update']);
+        Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
         // Chapters
         Route::post('/courses/{course}/chapters', [AdminChapterController::class, 'store']);
         Route::put('/chapters/{id}', [ChapterController::class, 'update']);

@@ -45,6 +45,10 @@ class CategoryController extends Controller
             'price' => 'nullable|numeric|min:0',
             'cover_image' => 'nullable|image|max:20480', // up to ~20MB
             'display_order' => 'nullable|integer|min:0',
+            'section_id' => 'nullable|exists:sections,id',
+        ], [
+            'name.unique' => 'عفواً، هذا الاسم مستخدم بالفعل، يرجى اختيار اسم آخر للدبلومة.',
+            'slug.unique' => 'عفواً، هذا الرابط (slug) مستخدم بالفعل، يرجى اختيار رابط آخر.',
         ]);
 
         if (!empty($validated['is_free'])) {
@@ -81,6 +85,10 @@ class CategoryController extends Controller
             'price' => 'nullable|numeric|min:0',
             'cover_image' => 'nullable|image|max:20480',
             'display_order' => 'nullable|integer|min:0',
+            'section_id' => 'nullable|exists:sections,id',
+        ], [
+            'name.unique' => 'عفواً، هذا الاسم مستخدم بالفعل، يرجى اختيار اسم آخر للدبلومة.',
+            'slug.unique' => 'عفواً، هذا الرابط (slug) مستخدم بالفعل، يرجى اختيار رابط آخر.',
         ]);
 
         if (!empty($validated['is_free'])) {
